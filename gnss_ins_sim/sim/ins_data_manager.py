@@ -289,9 +289,10 @@ class InsDataMgr(object):
         self.__all_in_one = [
             self.ref_pos.name,
             self.ref_att_euler.name,
-            self.ref_accel.name,
             self.ref_vel.name,
-            self.ref_gyro.name
+            self.ref_accel.name,
+            self.ref_gyro.name,
+            self.ref_odo.name
         ]
         # the following will not be saved
         self.__do_not_save = [self.fs.name, self.fs_gps.name,\
@@ -581,51 +582,51 @@ class InsDataMgr(object):
                 data_saved.append(data_name)
 
         for data_name in self.__all_in_one:
-            reverse = False
-
             if data_name in self.available:
-                if (data_name == 'ref_att_euler'):
-                    reverse = True
-
-                if not reverse:
-                    all_in_one_data.units.extend(self.__all[data_name].units)
-                    all_in_one_data.output_units.extend(self.__all[data_name].output_units)
-                    all_in_one_data.legend.extend(self.__all[data_name].legend)
-                    if (len(all_in_one_data.data) == 0):  # first time to combine data
-                        all_in_one_data.data = self.__all[data_name].data
-                    else:
-                        all_in_one_data.data = np.append(all_in_one_data.data, self.__all[data_name].data, 1)
+                all_in_one_data.units.extend(self.__all[data_name].units)
+                all_in_one_data.output_units.extend(self.__all[data_name].output_units)
+                all_in_one_data.legend.extend(self.__all[data_name].legend)
+                if (len(all_in_one_data.data) == 0):  # first time to combine data
+                    all_in_one_data.data = self.__all[data_name].data
                 else:
-                    tmp = self.__all[data_name].units
-                    tmp.reverse()
-                    all_in_one_data.units.extend(tmp)
+                  if (data_name == 'ref_odo'):
+                      ref_odo_2d = np.atleast_2d(self.__all[data_name].data)
+                      ref_odo_2d = np.transpose(ref_odo_2d)
+                      all_in_one_data.data = np.append(all_in_one_data.data, ref_odo_2d, 1)
+                  else:
+                      all_in_one_data.data = np.append(all_in_one_data.data, self.__all[data_name].data, 1)
 
-                    tmp = self.__all[data_name].output_units
-                    tmp.reverse()
-                    all_in_one_data.output_units.extend(tmp)
+        # ref_Yaw, ref_Pitch, ref_Roll -> ref_Roll, ref_Yaw, ref_Pitch
+        all_in_one_data.legend[3] = 'ref_Pitch'
+        all_in_one_data.legend[4] = 'ref_Roll'
+        all_in_one_data.legend[5] = 'ref_Yaw'
+        tmp_column = all_in_one_data.data[:, 3]
+        tmp_array = np.delete(all_in_one_data.data, 3, 1)
+        all_in_one_data.data = np.insert(tmp_array, 5, tmp_column, 1)
 
-                    tmp = self.__all[data_name].legend
-                    tmp.reverse()
-                    all_in_one_data.legend.extend(tmp)
+        # ref_vel from NED to ENU
+        tmp_column = all_in_one_data.data[:, 6]
+        tmp_array = np.delete(all_in_one_data.data, 6, 1)
+        all_in_one_data.data = np.insert(tmp_array, 7, tmp_column, 1)
+        all_in_one_data.data[:, 8] = -all_in_one_data.data[:, 8]
 
-                    if (len(all_in_one_data.data) == 0):  # first time to combine data
-                        all_in_one_data.data = np.flip(self.__all[data_name].data, 1)
-                    else:
-                        all_in_one_data.data = np.append(all_in_one_data.data, np.flip(self.__all[data_name].data, 1), 1)
+        # ref_accel from NED to ENU
+        tmp_column = all_in_one_data.data[:, 9]
+        tmp_array = np.delete(all_in_one_data.data, 9, 1)
+        all_in_one_data.data = np.insert(tmp_array, 10, tmp_column, 1)
+        all_in_one_data.data[:, 11] = -all_in_one_data.data[:, 11]
 
-        # change vxyz_ref -> vxyz_body
-        all_in_one_data.data[:, 9] = 8.33333
-        all_in_one_data.data[:, 10] = 0
-        all_in_one_data.data[:, 11] = 0
+        # ref_gyro from NED to ENU
+        tmp_column = all_in_one_data.data[:, 12]
+        tmp_array = np.delete(all_in_one_data.data, 12, 1)
+        all_in_one_data.data = np.insert(tmp_array, 13, tmp_column, 1)
+        all_in_one_data.data[:, 14] = -all_in_one_data.data[:, 14]
 
-        # add one column delt_s
-        all_in_one_data.units.append('m')
-        all_in_one_data.output_units.append('m')
-        all_in_one_data.legend.append('delt_s')
-        delt_s_data = all_in_one_data.data[:, 9]*0.01 + 0.5 * all_in_one_data.data[:, 6] * 0.001
-        delt_s_data = np.atleast_2d(delt_s_data)
-        delt_s_data = np.transpose(delt_s_data)
-        all_in_one_data.data = np.append(all_in_one_data.data, delt_s_data, axis=1)
+        # ref_odo to ref_dist
+        all_in_one_data.legend[15] = 'ref_dist'
+        all_in_one_data.units[15] = 'm'
+        all_in_one_data.output_units[15] = 'm'
+        all_in_one_data.data[:, 15] = all_in_one_data.data[:, 15]/100
 
         # 0~2 is ref_pos, no need to change from deg to rad for them
         for i in range(3, len(all_in_one_data.output_units)):
@@ -633,10 +634,6 @@ class InsDataMgr(object):
             all_in_one_data.output_units[i] = 'rad'
           if (all_in_one_data.output_units[i]) == 'deg/s':
             all_in_one_data.output_units[i] = 'rad/s'
-
-        # chang all *_z to negtive value since we need UP as positive
-        for i in [5, 8, 11, 14]:
-          all_in_one_data.data[:, i] = -all_in_one_data.data[:, i]
 
         print('saving %s'% all_in_one_data.name)
         all_in_one_data.save_to_file(data_dir)

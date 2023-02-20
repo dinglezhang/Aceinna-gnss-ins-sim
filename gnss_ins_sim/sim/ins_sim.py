@@ -724,6 +724,13 @@ class Sim(object):
                 os.makedirs(data_dir)
             except:
                 raise IOError('Cannot create dir: %s.'% data_dir)
+
+        # remove all files in data_dir before writing
+        file_list = os.listdir(data_dir)
+        for file_path in file_list:
+          file_full_path = os.path.join(data_dir, file_path)
+          os.remove(file_full_path)
+
         return data_dir
 
     def __add_associated_data_to_results(self):
