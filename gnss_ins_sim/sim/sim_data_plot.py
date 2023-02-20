@@ -198,7 +198,7 @@ def plot3d_in_one_figure(y, title='Figure', grid='on', legend=None, mpl_opt=''):
     '''
     # create figure and axis
     fig = plt.figure(title)
-    axis = fig.add_subplot(111, projection='3d', aspect='equal')
+    axis = fig.add_subplot(111, projection='3d', aspect='auto')
     try:
         dim = y.ndim
         if dim == 2:    # y must be an numpy array of size (n,3), dim=2

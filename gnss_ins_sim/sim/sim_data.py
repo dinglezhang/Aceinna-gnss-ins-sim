@@ -138,7 +138,7 @@ class Sim_data(object):
                 # units
                 str_unit = ''
                 if i < len(self.output_units):
-                    str_unit = ' (' + self.output_units[i] + ')'
+                    str_unit = '(' + self.output_units[i] + ')'
                 # add a column
                 if (self.legend is not None) and (cols == len(self.legend)):    # legend available
                     header_line += self.legend[i] + str_unit + ','
@@ -149,7 +149,7 @@ class Sim_data(object):
         else:           # only one column
             str_unit = ''
             if len(self.output_units) > 0:
-                str_unit = ' (' + self.output_units[0] + ')'
+                str_unit = '(' + self.output_units[0] + ')'
             header_line = self.name + str_unit
         #### save data and header to .csv files
         if isinstance(self.data, dict):

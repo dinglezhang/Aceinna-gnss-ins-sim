@@ -28,19 +28,19 @@ def test_path_gen():
     #### choose a built-in IMU model, typical for IMU381
     imu_err = 'mid-accuracy'
     # generate GPS and magnetometer data
-    imu = imu_model.IMU(accuracy=imu_err, axis=9, gps=True)
+    imu = imu_model.IMU(accuracy=imu_err, axis=6, gps=True, odo=True)
 
     #### start simulation
     sim = ins_sim.Sim([fs, fs_gps, fs_mag],
-                      motion_def_path+"//motion_def-3d.csv",
-                      ref_frame=1,
+                      motion_def_path+"//profile.txt",
+                      ref_frame=0,
                       imu=imu,
                       mode=None,
                       env=None,
                       algorithm=None)
     sim.run(1)
     # save simulation data to files
-    sim.results('')
+    sim.results('.//demo_saved_data//')
     # plot data, 3d plot of reference positoin, 2d plots of gyro and accel
     sim.plot(['ref_pos', 'gyro', 'gps_visibility'], opt={'ref_pos': '3d'})
 

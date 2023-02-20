@@ -285,6 +285,14 @@ class InsDataMgr(object):
         if fs[2] is not None:
             self.fs_mag.data = fs[2]
             self.available.append(self.fs_mag.name)
+        # outputInOne include all data name that need to write to one file
+        self.__all_in_one = [
+            self.ref_pos.name,
+            self.ref_att_euler.name,
+            self.ref_accel.name,
+            self.ref_vel.name,
+            self.ref_gyro.name
+        ]
         # the following will not be saved
         self.__do_not_save = [self.fs.name, self.fs_gps.name,\
                             self.fs_mag.name, self.ref_frame.name]
@@ -556,16 +564,83 @@ class InsDataMgr(object):
         '''
         save data to files
         Args:
-            data_dir: Data files will be saved in data_idr
+            data_dir: Data files will be saved in data_dir
         Returns:
             data_saved: a list of data that are saved.
         '''
         data_saved = []
-        for data in self.available:
-            if data not in self.__do_not_save:
-                # print('saving %s'% data)
-                self.__all[data].save_to_file(data_dir)
-                data_saved.append(data)
+        all_in_one_data = Sim_data(name='imu_all_in_one',\
+                                   description='all data output',\
+                                   units=[],\
+                                   output_units = [],\
+                                   legend=[])
+        for data_name in self.available:
+            if data_name not in self.__do_not_save:
+                print('saving %s'% data_name)
+                self.__all[data_name].save_to_file(data_dir)
+                data_saved.append(data_name)
+
+        for data_name in self.__all_in_one:
+            reverse = False
+
+            if data_name in self.available:
+                if (data_name == 'ref_att_euler'):
+                    reverse = True
+
+                if not reverse:
+                    all_in_one_data.units.extend(self.__all[data_name].units)
+                    all_in_one_data.output_units.extend(self.__all[data_name].output_units)
+                    all_in_one_data.legend.extend(self.__all[data_name].legend)
+                    if (len(all_in_one_data.data) == 0):  # first time to combine data
+                        all_in_one_data.data = self.__all[data_name].data
+                    else:
+                        all_in_one_data.data = np.append(all_in_one_data.data, self.__all[data_name].data, 1)
+                else:
+                    tmp = self.__all[data_name].units
+                    tmp.reverse()
+                    all_in_one_data.units.extend(tmp)
+
+                    tmp = self.__all[data_name].output_units
+                    tmp.reverse()
+                    all_in_one_data.output_units.extend(tmp)
+
+                    tmp = self.__all[data_name].legend
+                    tmp.reverse()
+                    all_in_one_data.legend.extend(tmp)
+
+                    if (len(all_in_one_data.data) == 0):  # first time to combine data
+                        all_in_one_data.data = np.flip(self.__all[data_name].data, 1)
+                    else:
+                        all_in_one_data.data = np.append(all_in_one_data.data, np.flip(self.__all[data_name].data, 1), 1)
+
+        # change vxyz_ref -> vxyz_body
+        all_in_one_data.data[:, 9] = 8.33333
+        all_in_one_data.data[:, 10] = 0
+        all_in_one_data.data[:, 11] = 0
+
+        # add one column delt_s
+        all_in_one_data.units.append('m')
+        all_in_one_data.output_units.append('m')
+        all_in_one_data.legend.append('delt_s')
+        delt_s_data = all_in_one_data.data[:, 9]*0.01 + 0.5 * all_in_one_data.data[:, 6] * 0.001
+        delt_s_data = np.atleast_2d(delt_s_data)
+        delt_s_data = np.transpose(delt_s_data)
+        all_in_one_data.data = np.append(all_in_one_data.data, delt_s_data, axis=1)
+
+        # 0~2 is ref_pos, no need to change from deg to rad for them
+        for i in range(3, len(all_in_one_data.output_units)):
+          if (all_in_one_data.output_units[i]) == 'deg':
+            all_in_one_data.output_units[i] = 'rad'
+          if (all_in_one_data.output_units[i]) == 'deg/s':
+            all_in_one_data.output_units[i] = 'rad/s'
+
+        # chang all *_z to negtive value since we need UP as positive
+        for i in [5, 8, 11, 14]:
+          all_in_one_data.data[:, i] = -all_in_one_data.data[:, i]
+
+        print('saving %s'% all_in_one_data.name)
+        all_in_one_data.save_to_file(data_dir)
+
         return data_saved
 
     def plot(self, what_to_plot, keys, angle=False, opt=None, extra_opt=''):
