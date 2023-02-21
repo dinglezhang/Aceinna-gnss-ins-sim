@@ -10,6 +10,7 @@ Created on 2018-04-24
 import os
 import time
 import math
+import shutil
 import numpy as np
 from .ins_data_manager import InsDataMgr
 from .ins_algo_manager import InsAlgoMgr
@@ -728,8 +729,11 @@ class Sim(object):
         # remove all files in data_dir before writing
         file_list = os.listdir(data_dir)
         for file_path in file_list:
-          file_full_path = os.path.join(data_dir, file_path)
-          os.remove(file_full_path)
+            file_full_path = os.path.join(data_dir, file_path)
+            if (os.path.isdir(file_full_path)):
+                shutil.rmtree(file_full_path)
+            else:
+                os.remove(file_full_path)
 
         return data_dir
 

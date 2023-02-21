@@ -285,15 +285,6 @@ class InsDataMgr(object):
         if fs[2] is not None:
             self.fs_mag.data = fs[2]
             self.available.append(self.fs_mag.name)
-        # outputInOne include all data name that need to write to one file
-        self.__all_in_one = [
-            self.ref_pos.name,
-            self.ref_att_euler.name,
-            self.ref_vel.name,
-            self.ref_accel.name,
-            self.ref_gyro.name,
-            self.ref_odo.name
-        ]
         # the following will not be saved
         self.__do_not_save = [self.fs.name, self.fs_gps.name,\
                             self.fs_mag.name, self.ref_frame.name]
@@ -570,74 +561,11 @@ class InsDataMgr(object):
             data_saved: a list of data that are saved.
         '''
         data_saved = []
-        all_in_one_data = Sim_data(name='imu_all_in_one',\
-                                   description='all data output',\
-                                   units=[],\
-                                   output_units = [],\
-                                   legend=[])
         for data_name in self.available:
             if data_name not in self.__do_not_save:
                 print('saving %s'% data_name)
                 self.__all[data_name].save_to_file(data_dir)
                 data_saved.append(data_name)
-
-        for data_name in self.__all_in_one:
-            if data_name in self.available:
-                all_in_one_data.units.extend(self.__all[data_name].units)
-                all_in_one_data.output_units.extend(self.__all[data_name].output_units)
-                all_in_one_data.legend.extend(self.__all[data_name].legend)
-                if (len(all_in_one_data.data) == 0):  # first time to combine data
-                    all_in_one_data.data = self.__all[data_name].data
-                else:
-                  if (data_name == 'ref_odo'):
-                      ref_odo_2d = np.atleast_2d(self.__all[data_name].data)
-                      ref_odo_2d = np.transpose(ref_odo_2d)
-                      all_in_one_data.data = np.append(all_in_one_data.data, ref_odo_2d, 1)
-                  else:
-                      all_in_one_data.data = np.append(all_in_one_data.data, self.__all[data_name].data, 1)
-
-        # ref_Yaw, ref_Pitch, ref_Roll -> ref_Roll, ref_Yaw, ref_Pitch
-        all_in_one_data.legend[3] = 'ref_Pitch'
-        all_in_one_data.legend[4] = 'ref_Roll'
-        all_in_one_data.legend[5] = 'ref_Yaw'
-        tmp_column = all_in_one_data.data[:, 3]
-        tmp_array = np.delete(all_in_one_data.data, 3, 1)
-        all_in_one_data.data = np.insert(tmp_array, 5, tmp_column, 1)
-
-        # ref_vel from NED to ENU
-        tmp_column = all_in_one_data.data[:, 6]
-        tmp_array = np.delete(all_in_one_data.data, 6, 1)
-        all_in_one_data.data = np.insert(tmp_array, 7, tmp_column, 1)
-        all_in_one_data.data[:, 8] = -all_in_one_data.data[:, 8]
-
-        # ref_accel from NED to ENU
-        tmp_column = all_in_one_data.data[:, 9]
-        tmp_array = np.delete(all_in_one_data.data, 9, 1)
-        all_in_one_data.data = np.insert(tmp_array, 10, tmp_column, 1)
-        all_in_one_data.data[:, 11] = -all_in_one_data.data[:, 11]
-
-        # ref_gyro from NED to ENU
-        tmp_column = all_in_one_data.data[:, 12]
-        tmp_array = np.delete(all_in_one_data.data, 12, 1)
-        all_in_one_data.data = np.insert(tmp_array, 13, tmp_column, 1)
-        all_in_one_data.data[:, 14] = -all_in_one_data.data[:, 14]
-
-        # ref_odo to ref_dist
-        all_in_one_data.legend[15] = 'ref_dist'
-        all_in_one_data.units[15] = 'm'
-        all_in_one_data.output_units[15] = 'm'
-        all_in_one_data.data[:, 15] = all_in_one_data.data[:, 15]/100
-
-        # 0~2 is ref_pos, no need to change from deg to rad for them
-        for i in range(3, len(all_in_one_data.output_units)):
-          if (all_in_one_data.output_units[i]) == 'deg':
-            all_in_one_data.output_units[i] = 'rad'
-          if (all_in_one_data.output_units[i]) == 'deg/s':
-            all_in_one_data.output_units[i] = 'rad/s'
-
-        print('saving %s'% all_in_one_data.name)
-        all_in_one_data.save_to_file(data_dir)
-
         return data_saved
 
     def plot(self, what_to_plot, keys, angle=False, opt=None, extra_opt=''):
