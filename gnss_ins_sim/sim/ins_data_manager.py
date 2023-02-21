@@ -563,7 +563,7 @@ class InsDataMgr(object):
         data_saved = []
         for data_name in self.available:
             if data_name not in self.__do_not_save:
-                print('saving %s'% data_name)
+                # print('saving %s'% data_name)
                 self.__all[data_name].save_to_file(data_dir)
                 data_saved.append(data_name)
         return data_saved
