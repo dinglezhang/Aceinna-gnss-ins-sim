@@ -25,22 +25,38 @@ def gen_custom_data_from_files(data_dir):
                       algorithm=None)
     sim.run(1)
 
-    description = \
-'''1~3: true LLA pos in the navigation frame
-4~6: true attitude (Euler angles, XYZ)
+    description_en = \
+'''1~3: true LLA pos
+4~6: true attitude (Euler angles, XYZ rotation sequency) in the ENU frame
 7~9: true vel in the ENU frame
-10~12: true accel in the body RFU frame
-13~15: true angular velocity in the body RFU frame
+10~12: true acceleration in the body RFU frame
+13~15: true angular velocity (XYZ rotation sequency) in the body RFU frame
 16: true distance per 10ms
 '''
+    description_zh = \
+'''各列含义介绍：
+1~3: 经度，纬度，高度
+4~6: 俯仰角，横滚角，航向角（XYZ旋转顺序，“东北天”坐标系）
+7~9: 东向速度，北向速度，天向速度（“东北天”坐标系）
+10~12: 车身右侧加速度，车身前方加速度，车身上方加速度（车身“右前上”坐标系）
+13~15: 俯仰角速度，横滚角速度，航向角速度（XYZ旋转顺序，车身“右前上”坐标系）
+16: 车前方每10ms里程
+以上均为理想值。
+'''
+
     output_units = [
         'deg', 'deg', 'm',
+
         'rad', 'rad', 'rad',
         #'deg', 'deg', 'deg',
+
         'm/s', 'm/s', 'm/s',
+
         'm/s^2', 'm/s^2', 'm/s^2',
+
         'rad/s', 'rad/s', 'rad/s',
         #'deg/s', 'deg/s', 'deg/s',
+
         'm'
     ]
     legend = [
@@ -48,11 +64,11 @@ def gen_custom_data_from_files(data_dir):
         'pitch', 'roll', 'yaw',
         'vel_x', 'vel_y', 'vel_z',
         'accel_x', 'accel_y', 'accel_z',
-        'gyro_x', 'gyro_y', 'gyro_z',
+        'pitch_vel', 'roll_vel', 'yaw_vel',
         'dist'
     ]
     custom_data = sim_data.Sim_data(name='imu_all',\
-                                    description=description,\
+                                    description=description_zh,\
                                     units=[],\
                                     output_units=output_units,\
                                     legend=legend)
@@ -75,8 +91,8 @@ def gen_custom_data_from_files(data_dir):
             if (row_num == -1):
                 row_num = cur_row_num
             else:
-              if (row_num != cur_row_num):
-                raise ValueError('Row number of %s data is wrong'% data.name)
+                if (row_num != cur_row_num):
+                    raise ValueError('Row number of %s data %d is wrong, should be %d'% (data.name, cur_row_num, row_num))
         else:
             raise ValueError('%s data is missing'% data.name)
 
@@ -87,25 +103,24 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 1] = sim.dmgr.ref_pos.data[:, 0]
     custom_data.data[:, 2] = sim.dmgr.ref_pos.data[:, 2]
 
-    # ref_Yaw, ref_Pitch, ref_Roll -> pitch, roll, yaw
-    custom_data.data[:, 3] = sim.dmgr.ref_att_euler.data[:, 1]
-    custom_data.data[:, 4] = sim.dmgr.ref_att_euler.data[:, 2]
-    custom_data.data[:, 5] = sim.dmgr.ref_att_euler.data[:, 0]
+    # ref_att_euler from NED(yaw, pitch, roll) to ENU(pitch, roll, yaw)
+    custom_data.data[:, 3:6] = sim.array_quat2euler(sim.dmgr.ref_att_quat.data, 'yxz')
+    custom_data.data[:, 5] = -custom_data.data[:, 5]
 
     # ref_vel from NED to ENU
     custom_data.data[:, 6] = sim.dmgr.ref_vel.data[:, 1]
     custom_data.data[:, 7] = sim.dmgr.ref_vel.data[:, 0]
     custom_data.data[:, 8] = -sim.dmgr.ref_vel.data[:, 2]
 
-    # ref_accel from NED to ENU
+    # ref_accel from FRD to RFU
     custom_data.data[:, 9] = sim.dmgr.ref_accel.data[:, 1]
     custom_data.data[:, 10] = sim.dmgr.ref_accel.data[:, 0]
     custom_data.data[:, 11] = -sim.dmgr.ref_accel.data[:, 2]
 
-    # ref_gyro from NED to ENU
-    custom_data.data[:, 12] = sim.dmgr.ref_gyro.data[:, 1]
-    custom_data.data[:, 13] = sim.dmgr.ref_gyro.data[:, 0]
-    custom_data.data[:, 14] = -sim.dmgr.ref_gyro.data[:, 2]
+    # ref_gyro from FRD(yaw, pitch, roll) to RFU(pitch, roll, yaw)
+    ref_gyro_quat = sim.array_euler2quat(sim.dmgr.ref_gyro.data)
+    custom_data.data[:, 12:15] = sim.array_quat2euler(ref_gyro_quat, 'yxz')
+    custom_data.data[:, 14] = -custom_data.data[:, 14]
 
     # ref_odo to ref_dist
     custom_data.units[15] = 'm'
@@ -116,7 +131,7 @@ def gen_custom_data_from_files(data_dir):
     custom_data.save_to_file(data_dir)
 
     read_me_name = data_dir + '//' + custom_data.name + '_readme.txt'
-    with open(read_me_name, 'w') as fp:
+    with open(read_me_name, 'w', encoding='UTF-8') as fp:
         fp.write(custom_data.description)
 
 if __name__ == '__main__':

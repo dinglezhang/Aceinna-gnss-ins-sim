@@ -149,10 +149,10 @@ class Sim(object):
         # associated data mapping. this is a dict in the following form:
         #   {'dst_name': ['src_name', routine_convert_src_to_dst]}
         self.data_map = {\
-            self.dmgr.ref_att_euler.name: [self.dmgr.ref_att_quat.name, self.__quat2euler_zyx],
-            self.dmgr.ref_att_quat.name: [self.dmgr.ref_att_euler.name, self.__euler2quat_zyx],
-            self.dmgr.att_euler.name: [self.dmgr.att_quat.name, self.__quat2euler_zyx],
-            self.dmgr.att_quat.name: [self.dmgr.att_euler.name, self.__euler2quat_zyx]}
+            self.dmgr.ref_att_euler.name: [self.dmgr.ref_att_quat.name, self.array_quat2euler],
+            self.dmgr.ref_att_quat.name: [self.dmgr.ref_att_euler.name, self.array_euler2quat],
+            self.dmgr.att_euler.name: [self.dmgr.att_quat.name, self.array_quat2euler],
+            self.dmgr.att_quat.name: [self.dmgr.att_euler.name, self.array_euler2quat]}
 
         # error terms we are interested in
         self.interested_error = {self.dmgr.att_euler.name: 'angle',
@@ -758,7 +758,7 @@ class Sim(object):
                     if not self.dmgr.is_available(i):
                         self.dmgr.add_data(i, self.data_map[i][1](src_data))
 
-    def __quat2euler_zyx(self, src):
+    def array_quat2euler(self, src, rot_seq='zyx'):
         '''
         quaternion to Euler angles (zyx)
         '''
@@ -766,7 +766,7 @@ class Sim(object):
             n = src.shape[0]
             dst = np.zeros((n, 3))
             for j in range(n):
-                dst[j, :] = attitude.quat2euler(src[j, :])
+                dst[j, :] = attitude.quat2euler(src[j, :], rot_seq)
             return dst
         elif isinstance(src, dict):
             dst = {}
@@ -774,13 +774,13 @@ class Sim(object):
                 n = src[i].shape[0]
                 euler = np.zeros((n, 3))
                 for j in range(n):
-                    euler[j, :] = attitude.quat2euler(src[i][j, :])
+                    euler[j, :] = attitude.quat2euler(src[i][j, :], rot_seq)
                 dst[i] = euler
             return dst
         else:
             raise ValueError('%s is not a dict or numpy array.'% src.name)
 
-    def __euler2quat_zyx(self, src):
+    def array_euler2quat(self, src, rot_seq='zyx'):
         '''
         Euler angles (zyx) to quaternion
         '''
@@ -789,7 +789,7 @@ class Sim(object):
             n = src.shape[0]
             dst = np.zeros((n, 4))
             for j in range(n):
-                dst[j, :] = attitude.euler2quat(src[j, :])
+                dst[j, :] = attitude.euler2quat(src[j, :], rot_seq)
             return dst
         # dict557
         elif isinstance(src, dict):
@@ -798,7 +798,7 @@ class Sim(object):
                 n = src[i].shape[0]
                 quat = np.zeros((n, 4))
                 for j in range(n):
-                    quat[j, :] = attitude.euler2quat(src[i][j, :])
+                    quat[j, :] = attitude.euler2quat(src[i][j, :], rot_seq)
                 dst[i] = quat
             return dst
         else:
