@@ -36,10 +36,10 @@ def gen_custom_data_from_files(data_dir):
     description_zh = \
 '''各列含义介绍：
 1~3: 经度，纬度，高度
-4~6: 俯仰角，横滚角，航向角（XYZ旋转顺序，“东北天”坐标系）
+4~6: 俯仰角，横滚角，航向角（ZYX旋转顺序，“东北天”坐标系）
 7~9: 东向速度，北向速度，天向速度（“东北天”坐标系）
 10~12: 车身右侧加速度，车身前方加速度，车身上方加速度（车身“右前上”坐标系）
-13~15: 俯仰角速度，横滚角速度，航向角速度（XYZ旋转顺序，车身“右前上”坐标系）
+13~15: 俯仰角速度，横滚角速度，航向角速度（ZYX旋转顺序，车身“右前上”坐标系）
 16: 车前方每10ms里程
 以上均为理想值。
 '''
@@ -104,8 +104,17 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 2] = sim.dmgr.ref_pos.data[:, 2]
 
     # ref_att_euler from NED(yaw, pitch, roll) to ENU(pitch, roll, yaw)
-    custom_data.data[:, 3:6] = sim.array_quat2euler(sim.dmgr.ref_att_quat.data, 'yxz')
-    custom_data.data[:, 5] = -custom_data.data[:, 5]
+    #custom_data.data[:, 3:6] = sim.array_quat2euler(sim.dmgr.ref_att_quat.data, 'yxz')
+    #custom_data.data[:, 5] = -custom_data.data[:, 5]
+
+    #ref_att_euler_zxy = sim.array_quat2euler(sim.dmgr.ref_att_quat.data, 'zxy')
+    #custom_data.data[:, 3] = ref_att_euler_zxy[:, 2]
+    #custom_data.data[:, 4] = ref_att_euler_zxy[:, 1]
+    #custom_data.data[:, 5] = ref_att_euler_zxy[:, 0]
+
+    custom_data.data[:, 3] = sim.dmgr.ref_att_euler.data[:, 1]
+    custom_data.data[:, 4] = sim.dmgr.ref_att_euler.data[:, 2]
+    custom_data.data[:, 5] = sim.dmgr.ref_att_euler.data[:, 0]
 
     # ref_vel from NED to ENU
     custom_data.data[:, 6] = sim.dmgr.ref_vel.data[:, 1]
@@ -118,9 +127,18 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 11] = -sim.dmgr.ref_accel.data[:, 2]
 
     # ref_gyro from FRD(yaw, pitch, roll) to RFU(pitch, roll, yaw)
-    ref_gyro_quat = sim.array_euler2quat(sim.dmgr.ref_gyro.data)
-    custom_data.data[:, 12:15] = sim.array_quat2euler(ref_gyro_quat, 'yxz')
-    custom_data.data[:, 14] = -custom_data.data[:, 14]
+    #ref_gyro_quat = sim.array_euler2quat(sim.dmgr.ref_gyro.data)
+    #custom_data.data[:, 12:15] = sim.array_quat2euler(ref_gyro_quat, 'yxz')
+    #custom_data.data[:, 14] = -custom_data.data[:, 14]
+
+    #ref_gyro_zxy = sim.array_quat2euler(ref_gyro_quat, 'zxy')
+    #custom_data.data[:, 12] = ref_gyro_zxy[:, 2]
+    #custom_data.data[:, 13] = ref_gyro_zxy[:, 1]
+    #custom_data.data[:, 14] = ref_gyro_zxy[:, 0]
+
+    custom_data.data[:, 12] = sim.dmgr.ref_gyro.data[:, 1]
+    custom_data.data[:, 13] = sim.dmgr.ref_gyro.data[:, 0]
+    custom_data.data[:, 14] = -sim.dmgr.ref_gyro.data[:, 2]
 
     # ref_odo to ref_dist
     custom_data.units[15] = 'm'
