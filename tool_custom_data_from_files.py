@@ -31,7 +31,7 @@ def gen_custom_data_from_files(data_dir):
 7~9: true vel in the ENU frame
 10~12: true acceleration in the body RFU frame
 13~15: true angular velocity (XYZ rotation sequency) in the body RFU frame
-16: true distance per 10ms
+16: true delta distance per 10ms
 '''
     description_zh = \
 '''各列含义介绍：
@@ -65,7 +65,7 @@ def gen_custom_data_from_files(data_dir):
         'vel_x', 'vel_y', 'vel_z',
         'accel_x', 'accel_y', 'accel_z',
         'pitch_vel', 'roll_vel', 'yaw_vel',
-        'dist'
+        'delta_dist'
     ]
     custom_data = sim_data.Sim_data(name='imu_all',\
                                     description=description_zh,\
@@ -86,7 +86,11 @@ def gen_custom_data_from_files(data_dir):
     row_num = -1
     for data in all_data_needed:
         if data.name in sim.dmgr.available:
-            custom_data.units.extend(data.units)
+            if (data.name == 'ref_odo'):
+              custom_data.units.extend('m')
+            else:
+              custom_data.units.extend(data.units)
+
             cur_row_num = data.data.shape[0]
             if (row_num == -1):
                 row_num = cur_row_num
@@ -140,9 +144,9 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 13] = sim.dmgr.ref_gyro.data[:, 0]
     custom_data.data[:, 14] = -sim.dmgr.ref_gyro.data[:, 2]
 
-    # ref_odo to ref_dist
-    custom_data.units[15] = 'm'
-    custom_data.data[:, 15] = sim.dmgr.ref_odo.data.reshape((row_num, 1))[:, 0]/fs
+    # ref_odo to delta_dist
+    custom_data.data[:, 15] = sim.dmgr.ref_odo.data[:, 0]
+    custom_data.data[1:row_num, 15] = custom_data.data[1:row_num, 15] - custom_data.data[0:row_num-1, 15]
 
     # save custom date file and readme
     print('saving %s'% custom_data.name)

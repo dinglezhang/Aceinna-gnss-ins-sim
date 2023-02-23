@@ -478,7 +478,7 @@ class Sim(object):
         if self.imu.magnetometer:
             self.dmgr.add_data(self.dmgr.ref_mag.name, rtn['mag'][:, 1:4])
         if self.imu.odo:
-            self.dmgr.add_data(self.dmgr.ref_odo.name, rtn['odo'][:, 2])
+            self.dmgr.add_data(self.dmgr.ref_odo.name, rtn['odo'][:, 1:5])
         # generate sensor data
         # environment-->vibraition params
         vib_def_acc = None
@@ -503,7 +503,7 @@ class Sim(object):
                 mag = pathgen.mag_gen(self.dmgr.ref_mag.data, self.imu.mag_err)
                 self.dmgr.add_data(self.dmgr.mag.name, mag, key=i)
             if self.imu.odo:
-                odo = pathgen.odo_gen(self.dmgr.ref_odo.data, self.imu.odo_err)
+                odo = pathgen.odo_gen(self.dmgr.ref_odo.data[:, 1], self.imu.odo_err)
                 self.dmgr.add_data(self.dmgr.odo.name, odo, key=i)
 
     def __get_data_name_and_key(self, file_name):

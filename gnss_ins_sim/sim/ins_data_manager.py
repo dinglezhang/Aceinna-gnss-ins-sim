@@ -82,7 +82,7 @@ class InsDataMgr(object):
                                 output_units=['deg', 'deg', 'm'],\
                                 legend=['ref_pos_lat', 'ref_pos_lon', 'ref_pos_alt'])
         self.ref_vel = Sim_data(name='ref_vel',\
-                                description='true vel in the NED frame',\
+                                description='true velocity in the NED frame',\
                                 units=['m/s', 'm/s', 'm/s'],\
                                 legend=['ref_vel_x', 'ref_vel_y', 'ref_vel_z'])
         self.ref_att_euler = Sim_data(name='ref_att_euler',\
@@ -110,9 +110,9 @@ class InsDataMgr(object):
                                         'ref_gps_vN', 'ref_gps_vE', 'ref_gps_vD'])
                                 # downsampled true pos/vel
         self.ref_odo = Sim_data(name='ref_odo',\
-                                description='true odometer velocity',\
-                                units=['m/s'],\
-                                legend=['ref_odo'])
+                                description='true odometer distance and velocity in body frame',\
+                                units=['m', 'm/s', 'm/s', 'm/s'],\
+                                legend=['dist', 'vel_x', 'vel_y', 'vel_z'])
         self.ref_mag = Sim_data(name='ref_mag',\
                                 description='true magnetic field in the body frame',\
                                 units=['uT', 'uT', 'uT'],\
