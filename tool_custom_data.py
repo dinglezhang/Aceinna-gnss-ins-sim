@@ -51,7 +51,7 @@ def gen_custom_data_from_files(data_dir):
     description_zh = \
 '''各列含义介绍：
 1~3: 经度，纬度，高度
-4~6: 俯仰角，横滚角，航向角（ZYX旋转顺序，“东北天”坐标系）
+4~6: 俯仰角，横滚角，航向角（ZYX旋转顺序，“东北天”坐标系，航向角为北向逆时针旋转到车头方向角度）
 7~9: 东向速度，北向速度，天向速度（“东北天”坐标系）
 10~12: 车身右侧加速度，车身前方加速度，车身上方加速度（车身“右前上”坐标系）
 13~15: 俯仰角速度，横滚角速度，航向角速度（ZYX旋转顺序，车身“右前上”坐标系）
@@ -145,7 +145,9 @@ def gen_custom_data_from_files(data_dir):
         q = R.from_rotvec(theta * crossv.reshape(3))
         enu_rfu_euler[i] = q.as_euler('zyx')
 
-    custom_data.data[:, 3:6] = enu_rfu_euler
+    custom_data.data[:, 3] = enu_rfu_euler[:, 1]
+    custom_data.data[:, 4] = enu_rfu_euler[:, 2]
+    custom_data.data[:, 5] = enu_rfu_euler[:, 0]
 
     # ref_vel from NED to ENU
     custom_data.data[:, 6] = sim.dmgr.ref_vel.data[:, 1]
