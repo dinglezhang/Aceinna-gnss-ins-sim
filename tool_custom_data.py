@@ -5,14 +5,29 @@ Created on 2023-02-21
 """
 
 import os
+import math
 import numpy as np
 from gnss_ins_sim.sim import ins_sim
 from gnss_ins_sim.sim import sim_data
+from gnss_ins_sim.attitude import attitude
+from scipy.spatial.transform import Rotation as R
 
 motion_def_path = os.path.abspath('.//demo_motion_def_files//')
 fs = 100.0          # IMU sample frequency
 fs_gps = 10.0       # GPS sample frequency
 fs_mag = fs         # magnetometer sample frequency, not used for now
+
+def build_rotation_matrix(rotation_quaternion: np.ndarray):
+    """Construct a 3x3 rotation matrix given a rotation quaternion"""
+    q0 = rotation_quaternion[0][0]
+    q1 = rotation_quaternion[1][0]
+    q2 = rotation_quaternion[2][0]
+    q3 = rotation_quaternion[3][0]
+    return np.array([
+        [2*q0**2 + 2*q1**2 - 1, 2*(q1*q2 - q3*q0),      2*(q1*q3 + q2*q0)],
+        [2*(q1*q2 + q3*q0),     2*q0**2 + 2*q2**2 - 1,  2*(q2*q3 - q1*q0)],
+        [2*(q1*q3 - q2*q0),     2*(q2*q3 + q1*q0),      2*q0**2 + 2*q3**2 - 1]
+    ])
 
 def gen_custom_data_from_files(data_dir):
     # start simulation by reading data from files
@@ -108,17 +123,29 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 2] = sim.dmgr.ref_pos.data[:, 2]
 
     # ref_att_euler from NED(yaw, pitch, roll) to ENU(pitch, roll, yaw)
-    #custom_data.data[:, 3:6] = sim.array_quat2euler(sim.dmgr.ref_att_quat.data, 'yxz')
-    #custom_data.data[:, 5] = -custom_data.data[:, 5]
+    ned2enu_quaternion = np.array([
+        [0],
+        [-math.sqrt(2)/2],
+        [-math.sqrt(2)/2],
+        [0]
+        ])
+    ned2enu_rotation_matrix = build_rotation_matrix(ned2enu_quaternion)
 
-    #ref_att_euler_zxy = sim.array_quat2euler(sim.dmgr.ref_att_quat.data, 'zxy')
-    #custom_data.data[:, 3] = ref_att_euler_zxy[:, 2]
-    #custom_data.data[:, 4] = ref_att_euler_zxy[:, 1]
-    #custom_data.data[:, 5] = ref_att_euler_zxy[:, 0]
+    ned2frd_quat = sim.dmgr.ref_att_quat.data
+    frdheading = np.array([[1], [0], [0]])
+    rfuheading = np.array([[0], [1], [0]])
+    enu_rfu_euler = np.zeros([ned2frd_quat.shape[0], 3])
+    for i in range(0, ned2frd_quat.shape[0]):
+        vec_ned = attitude.quat2dcm(ned2frd_quat[i]).T.dot(frdheading)
+        vec_enu = ned2enu_rotation_matrix.dot(vec_ned)
+        crossv = attitude.cross3(rfuheading, vec_enu)
+        #crossv = attitude.cross3(vec_enu, rfuheading)
+        crossv = crossv / np.linalg.norm(crossv)
+        theta  = math.acos(vec_enu.reshape(3).dot(rfuheading.reshape(3))/(np.linalg.norm(vec_enu) * np.linalg.norm(rfuheading)))
+        q = R.from_rotvec(theta * crossv.reshape(3))
+        enu_rfu_euler[i] = q.as_euler('zyx')
 
-    custom_data.data[:, 3] = sim.dmgr.ref_att_euler.data[:, 1]
-    custom_data.data[:, 4] = sim.dmgr.ref_att_euler.data[:, 2]
-    custom_data.data[:, 5] = sim.dmgr.ref_att_euler.data[:, 0]
+    custom_data.data[:, 3:6] = enu_rfu_euler
 
     # ref_vel from NED to ENU
     custom_data.data[:, 6] = sim.dmgr.ref_vel.data[:, 1]
@@ -131,15 +158,6 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 11] = -sim.dmgr.ref_accel.data[:, 2]
 
     # ref_gyro from FRD(yaw, pitch, roll) to RFU(pitch, roll, yaw)
-    #ref_gyro_quat = sim.array_euler2quat(sim.dmgr.ref_gyro.data)
-    #custom_data.data[:, 12:15] = sim.array_quat2euler(ref_gyro_quat, 'yxz')
-    #custom_data.data[:, 14] = -custom_data.data[:, 14]
-
-    #ref_gyro_zxy = sim.array_quat2euler(ref_gyro_quat, 'zxy')
-    #custom_data.data[:, 12] = ref_gyro_zxy[:, 2]
-    #custom_data.data[:, 13] = ref_gyro_zxy[:, 1]
-    #custom_data.data[:, 14] = ref_gyro_zxy[:, 0]
-
     custom_data.data[:, 12] = sim.dmgr.ref_gyro.data[:, 1]
     custom_data.data[:, 13] = sim.dmgr.ref_gyro.data[:, 0]
     custom_data.data[:, 14] = -sim.dmgr.ref_gyro.data[:, 2]

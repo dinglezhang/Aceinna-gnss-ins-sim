@@ -97,7 +97,7 @@ def gen_custom_data_from_files(data_dir):
         sim.dmgr.ref_vel,
         sim.dmgr.ref_accel,
         sim.dmgr.ref_gyro,
-        sim.dmgr.ref_odo
+        #sim.dmgr.ref_odo
     ]
     row_num = -1
     for data in all_data_needed:
@@ -120,7 +120,6 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 2] = sim.dmgr.ref_pos.data[:, 2]
 
     # ref_att_euler from NED(yaw, pitch, roll) to ENU(pitch, roll, yaw)
-    
     ned2enu_quaternion = np.array([
         [0],
         [-math.sqrt(2)/2],
@@ -129,18 +128,21 @@ def gen_custom_data_from_files(data_dir):
         ])
     ned2enu_rotation_matrix = build_rotation_matrix(ned2enu_quaternion)
     
+    ned2frd_quat = sim.dmgr.ref_att_quat.data
     frdheading = np.array([[1], [0], [0]])
     rfuheading = np.array([[0], [1], [0]])
-    ned2frd_quat = sim.dmgr.ref_att_quat.data
-    ned2frd_rot  = build_rotation_matrix(ned2frd_quat)
-    vec_ned = ned2frd_rot.T.dot(frdheading)
-    vec_enu = ned2enu_rotation_matrix.dot(vec_ned)
-    
-    crossv = attitude.cross3(vec_enu, rfuheading)
-    theta = math.acos(vec_enu.reshape(3).dot(rfuheading.reshape(3))/(np.linalg.norm(vec_enu) * np.linalg.norm(rfuheading)))
-
-    q = R.from_rotvec(theta * crossv.reshape(3))
-    enu_rfu_euler = q.as_euler('zyx')
+    enu_rfu_euler = np.zeros([ned2frd_quat.shape[0], 3])
+    for i in range(0, ned2frd_quat.shape[0]):
+        vec_ned = attitude.quat2dcm(ned2frd_quat[i]).T.dot(frdheading)
+        vec_enu = ned2enu_rotation_matrix.dot(vec_ned)
+        crossv = attitude.cross3(rfuheading, vec_enu)
+        #crossv = attitude.cross3(vec_enu, rfuheading)
+        crossv = crossv / np.linalg.norm(crossv)
+        theta  = math.acos(vec_enu.reshape(3).dot(rfuheading.reshape(3))/(np.linalg.norm(vec_enu) * np.linalg.norm(rfuheading)))
+        q = R.from_rotvec(theta * crossv.reshape(3))
+        enu_rfu_euler[i] = q.as_euler('zyx')
+        
+    v = attitude.euler2dcm(enu_rfu_euler[0], 'zyx').T.dot([0, 8, 0])
     
     custom_data.data[:, 3:6] = np.matmul(ned2enu_rotation_matrix, sim.dmgr.ref_att_euler.data)
     tmp = custom_data.data[:, 3]
@@ -182,8 +184,8 @@ if __name__ == '__main__':
     data_dir = os.path.abspath('.//demo_saved_data//')
     gen_custom_data_from_files(data_dir)
     
-        # Verifying ENU -> NED
-    '''    
+    # Verifying ENU -> NED
+    '''
     ned2enu_quaternion = np.array([
         [0],
         [-math.sqrt(2)/2],
