@@ -76,7 +76,7 @@ def gen_custom_data_from_files(data_dir):
     description_zh = \
 '''各列含义介绍：
 1~3: 经度，纬度，高度
-4~6: 俯仰角，横滚角，航向角（ZYX旋转顺序，“东北天”坐标系，航向角为北向逆时针旋转到车头方向角度）
+4~6: 俯仰角，横滚角，航向角（ZYX旋转顺序，“东北天”坐标系，航向角为北向顺时针旋转到车头方向角度）
 7~9: 东向速度，北向速度，天向速度（“东北天”坐标系）
 10~12: 车身右侧加速度，车身前方加速度，车身上方加速度（车身“右前上”坐标系）
 13~15: 俯仰角速度，横滚角速度，航向角速度（ZYX旋转顺序，车身“右前上”坐标系）
@@ -148,11 +148,14 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 2] = sim.dmgr.ref_pos.data[:, 2]
 
     # ref_att_euler from NED(yaw, pitch, roll) to ENU(pitch, roll, yaw)
-    enu_rfu_euler = euler_frd_to_rfu(sim.dmgr.ref_att_quat.data)
+    #enu_rfu_euler = euler_frd_to_rfu(sim.dmgr.ref_att_quat.data)
+    #custom_data.data[:, 3] = enu_rfu_euler[:, 1]
+    #custom_data.data[:, 4] = enu_rfu_euler[:, 2]
+    #custom_data.data[:, 5] = enu_rfu_euler[:, 0]
 
-    custom_data.data[:, 3] = enu_rfu_euler[:, 1]
-    custom_data.data[:, 4] = enu_rfu_euler[:, 2]
-    custom_data.data[:, 5] = enu_rfu_euler[:, 0]
+    custom_data.data[:, 3] = sim.dmgr.ref_att_euler.data[:, 1]
+    custom_data.data[:, 4] = sim.dmgr.ref_att_euler.data[:, 2]
+    custom_data.data[:, 5] = sim.dmgr.ref_att_euler.data[:, 0]
 
     # ref_vel from NED to ENU
     custom_data.data[:, 6] = sim.dmgr.ref_vel.data[:, 1]
