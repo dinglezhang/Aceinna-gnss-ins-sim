@@ -29,6 +29,31 @@ def build_rotation_matrix(rotation_quaternion: np.ndarray):
         [2*(q1*q3 - q2*q0),     2*(q2*q3 + q1*q0),      2*q0**2 + 2*q3**2 - 1]
     ])
 
+def euler_frd_to_rfu(ref_att_quat_data):
+    ned2enu_quaternion = np.array([
+        [0],
+        [-math.sqrt(2)/2],
+        [-math.sqrt(2)/2],
+        [0]
+        ])
+    ned2enu_rotation_matrix = build_rotation_matrix(ned2enu_quaternion)
+
+    ned2frd_quat = ref_att_quat_data
+    frdheading = np.array([[1], [0], [0]])
+    rfuheading = np.array([[0], [1], [0]])
+    enu_rfu_euler = np.zeros([ned2frd_quat.shape[0], 3])
+    for i in range(0, ned2frd_quat.shape[0]):
+        vec_ned = attitude.quat2dcm(ned2frd_quat[i]).T.dot(frdheading)
+        vec_enu = ned2enu_rotation_matrix.dot(vec_ned)
+        crossv = attitude.cross3(rfuheading, vec_enu)
+        #crossv = attitude.cross3(vec_enu, rfuheading)
+        crossv = crossv / np.linalg.norm(crossv)
+        theta  = math.acos(vec_enu.reshape(3).dot(rfuheading.reshape(3))/(np.linalg.norm(vec_enu) * np.linalg.norm(rfuheading)))
+        q = R.from_rotvec(theta * crossv.reshape(3))
+        enu_rfu_euler[i] = q.as_euler('zyx')
+
+    return enu_rfu_euler
+
 def gen_custom_data_from_files(data_dir):
     # start simulation by reading data from files
     sim = ins_sim.Sim([fs, fs_gps, fs_mag],
@@ -123,27 +148,7 @@ def gen_custom_data_from_files(data_dir):
     custom_data.data[:, 2] = sim.dmgr.ref_pos.data[:, 2]
 
     # ref_att_euler from NED(yaw, pitch, roll) to ENU(pitch, roll, yaw)
-    ned2enu_quaternion = np.array([
-        [0],
-        [-math.sqrt(2)/2],
-        [-math.sqrt(2)/2],
-        [0]
-        ])
-    ned2enu_rotation_matrix = build_rotation_matrix(ned2enu_quaternion)
-
-    ned2frd_quat = sim.dmgr.ref_att_quat.data
-    frdheading = np.array([[1], [0], [0]])
-    rfuheading = np.array([[0], [1], [0]])
-    enu_rfu_euler = np.zeros([ned2frd_quat.shape[0], 3])
-    for i in range(0, ned2frd_quat.shape[0]):
-        vec_ned = attitude.quat2dcm(ned2frd_quat[i]).T.dot(frdheading)
-        vec_enu = ned2enu_rotation_matrix.dot(vec_ned)
-        crossv = attitude.cross3(rfuheading, vec_enu)
-        #crossv = attitude.cross3(vec_enu, rfuheading)
-        crossv = crossv / np.linalg.norm(crossv)
-        theta  = math.acos(vec_enu.reshape(3).dot(rfuheading.reshape(3))/(np.linalg.norm(vec_enu) * np.linalg.norm(rfuheading)))
-        q = R.from_rotvec(theta * crossv.reshape(3))
-        enu_rfu_euler[i] = q.as_euler('zyx')
+    enu_rfu_euler = euler_frd_to_rfu(sim.dmgr.ref_att_quat.data)
 
     custom_data.data[:, 3] = enu_rfu_euler[:, 1]
     custom_data.data[:, 4] = enu_rfu_euler[:, 2]
