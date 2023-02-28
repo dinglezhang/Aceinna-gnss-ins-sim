@@ -7,6 +7,7 @@ Created on 2017-12-19
 @author: dongxiaoguang
 """
 
+import os
 import numpy as np
 from ..attitude import attitude
 
@@ -151,7 +152,11 @@ class Sim_data(object):
             if len(self.output_units) > 0:
                 str_unit = '(' + self.output_units[0] + ')'
             header_line = self.name + str_unit
+
         #### save data and header to .csv files
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+
         if isinstance(self.data, dict):
             for i in self.data:
                 file_name = data_dir + '//' + self.name + '-' + str(i) + '.csv'
