@@ -143,34 +143,25 @@ def gen_custom_data_from_files(input_data_dir, output_data_dir):
     custom_data.data = np.zeros((row_num, 16))
 
     # lat, lon, alt -> lon, lat, alt
-    custom_data.data[:, 0] = sim.dmgr.ref_pos.data[:, 1]
-    custom_data.data[:, 1] = sim.dmgr.ref_pos.data[:, 0]
-    custom_data.data[:, 2] = sim.dmgr.ref_pos.data[:, 2]
+    custom_data.data[:, 0:3] = sim.dmgr.ref_pos.data[:, [1, 0, 2]]
 
     # ref_att_euler from NED(yaw, pitch, roll) to ENU(pitch, roll, yaw)
     #enu_rfu_euler = euler_frd_to_rfu(sim.dmgr.ref_att_quat.data)
-    #custom_data.data[:, 3] = enu_rfu_euler[:, 1]
-    #custom_data.data[:, 4] = enu_rfu_euler[:, 2]
-    #custom_data.data[:, 5] = enu_rfu_euler[:, 0]
+    #custom_data.data[:, 0:3] = enu_rfu_euler[:, [1, 2, 0]]
 
-    custom_data.data[:, 3] = sim.dmgr.ref_att_euler.data[:, 1]
-    custom_data.data[:, 4] = sim.dmgr.ref_att_euler.data[:, 2]
-    custom_data.data[:, 5] = sim.dmgr.ref_att_euler.data[:, 0]
+    custom_data.data[:, 3:6] = sim.dmgr.ref_att_euler.data[:, [1, 2, 0]]
 
     # ref_vel from NED to ENU
-    custom_data.data[:, 6] = sim.dmgr.ref_vel.data[:, 1]
-    custom_data.data[:, 7] = sim.dmgr.ref_vel.data[:, 0]
-    custom_data.data[:, 8] = -sim.dmgr.ref_vel.data[:, 2]
+    custom_data.data[:, 6:9] = sim.dmgr.ref_vel.data[:, [1, 0, 2]]
+    custom_data.data[:, 8] = -custom_data.data[:, 8]
 
     # ref_accel from FRD to RFU
-    custom_data.data[:, 9] = sim.dmgr.ref_accel.data[:, 1]
-    custom_data.data[:, 10] = sim.dmgr.ref_accel.data[:, 0]
-    custom_data.data[:, 11] = -sim.dmgr.ref_accel.data[:, 2]
+    custom_data.data[:, 9:12] = sim.dmgr.ref_accel.data[:, [1, 0, 2]]
+    custom_data.data[:, 11] = -custom_data.data[:, 11]
 
     # ref_gyro from FRD(yaw, pitch, roll) to RFU(pitch, roll, yaw)
-    custom_data.data[:, 12] = sim.dmgr.ref_gyro.data[:, 1]
-    custom_data.data[:, 13] = sim.dmgr.ref_gyro.data[:, 0]
-    custom_data.data[:, 14] = -sim.dmgr.ref_gyro.data[:, 2]
+    custom_data.data[:, 12:15] = sim.dmgr.ref_gyro.data[:, [1, 0, 2]]
+    custom_data.data[:, 14] = -custom_data.data[:, 14]
 
     # ref_odo to delta_dist
     custom_data.data[:, 15] = sim.dmgr.ref_odo.data[:, 0]
