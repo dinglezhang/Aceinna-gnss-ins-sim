@@ -15,3 +15,5 @@ __pycache__/
 /demo_algorithms/mag_calibrate_src/cmake/
 
 gnss_ins_sim.egg-info/
+
+/tool_data/output

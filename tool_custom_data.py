@@ -54,10 +54,10 @@ def euler_frd_to_rfu(ref_att_quat_data):
 
     return enu_rfu_euler
 
-def gen_custom_data_from_files(data_dir):
-    # start simulation by reading data from files
+def gen_custom_data_from_files(input_data_dir, output_data_dir):
+    # start simulation to read data from files
     sim = ins_sim.Sim([fs, fs_gps, fs_mag],
-                      data_dir,
+                      input_data_dir,
                       ref_frame=0,
                       imu=None,
                       mode=None,
@@ -178,12 +178,13 @@ def gen_custom_data_from_files(data_dir):
 
     # save custom date file and readme
     print('saving %s'% custom_data.name)
-    custom_data.save_to_file(data_dir)
+    custom_data.save_to_file(output_data_dir)
 
-    read_me_name = data_dir + '//' + custom_data.name + '_readme.txt'
+    read_me_name = output_data_dir + '//' + custom_data.name + '_readme.txt'
     with open(read_me_name, 'w', encoding='UTF-8') as fp:
         fp.write(custom_data.description)
 
 if __name__ == '__main__':
-    data_dir = os.path.abspath('.//demo_saved_data//')
-    gen_custom_data_from_files(data_dir)
+    input_data_dir = os.path.abspath('.//demo_saved_data//')
+    output_data_dir = os.path.abspath('.//tool_data//output//')
+    gen_custom_data_from_files(input_data_dir, output_data_dir)
