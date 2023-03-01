@@ -115,7 +115,7 @@ class Sim_data(object):
                 self.data = {}
             self.data[key] = data
 
-    def save_to_file(self, data_dir):
+    def save_to_file(self, data_dir, fmt='%.18e'):
         '''
         Save self.data to files.
         Args:
@@ -162,11 +162,13 @@ class Sim_data(object):
                 file_name = data_dir + '//' + self.name + '-' + str(i) + '.csv'
                 np.savetxt(file_name,\
                            convert_unit(self.data[i], self.units, self.output_units),\
+                           fmt=fmt,\
                            header=header_line, delimiter=',', comments='')
         else:
             file_name = data_dir + '//' + self.name + '.csv'
             np.savetxt(file_name,\
                        convert_unit(self.data, self.units, self.output_units),\
+                       fmt=fmt,\
                        header=header_line, delimiter=',', comments='')
 
     def plot(self, x, key=None, plot3d=0, mpl_opt=''):

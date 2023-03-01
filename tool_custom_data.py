@@ -12,7 +12,6 @@ from gnss_ins_sim.sim import sim_data
 from gnss_ins_sim.attitude import attitude
 from scipy.spatial.transform import Rotation as R
 
-motion_def_path = os.path.abspath('.//demo_motion_def_files//')
 fs = 100.0          # IMU sample frequency
 fs_gps = 10.0       # GPS sample frequency
 fs_mag = fs         # magnetometer sample frequency, not used for now
@@ -167,7 +166,7 @@ def gen_custom_data_from_files(input_data_dir, output_data_dir):
     custom_data.data[:, 15] = sim.dmgr.ref_odo.data[:, 0]
     custom_data.data[1:row_num, 15] = custom_data.data[1:row_num, 15] - custom_data.data[0:row_num-1, 15]
 
-    # save custom date file and readme
+    # save custom data file and readme
     print('saving %s'% custom_data.name)
     custom_data.save_to_file(output_data_dir)
 
