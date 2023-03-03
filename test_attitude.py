@@ -13,11 +13,11 @@ def test_euler_2_x():
     print('%s (%s)\n'% (euler_d_input, euler_r_input))
 
     dcm = attitude.euler2dcm(euler_r_input, 'zyx')
-    rot = Rotation.from_euler('ZYX', euler_r_input)
+    rot = Rotation.from_euler('ZYX', euler_r_input) # in body frame (intrinsic)
 
     dcm_scipy = rot.as_matrix()
     result = FAILED_STR
-    if np.allclose(dcm, dcm_scipy.T):
+    if np.allclose(dcm, dcm_scipy.T): # attitude is to rotate frame for postmultiplication, but scipy is to rotate vector
         result =  PASS_STR
     print('***dcm output: %s'% result)
     print('attitude:\n%s'% dcm)
@@ -32,7 +32,12 @@ def test_euler_2_x():
     print('attitude:\n%s'% quat)
     print('scipy: \n%s\n'% quat_scipy)
 
-    for seq in ('zyx', 'zxy', 'yxz', 'yzx', 'xyz', 'xzy'):
+    for seq in (\
+        # three axis rotation
+        'zyx', 'zxy', 'yxz', 'yzx', 'xyz', 'xzy', \
+        # two axis rotation
+        'zyz', 'zxz', 'yxy', 'yzy', 'xyx', 'xzx'\
+        ):
         euler_r_output = attitude.dcm2euler(dcm, seq)
         euler_d_output = euler_r_output * attitude.R2D
 
