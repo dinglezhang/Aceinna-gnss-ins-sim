@@ -23,6 +23,15 @@
       "justMyCode": false
     },
     {
+      "name": "test_attitude",
+      "type": "python",
+      "request": "launch",
+      "module": "test_attitude",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
       "name": "demo_no_algo",
       "type": "python",
       "request": "launch",

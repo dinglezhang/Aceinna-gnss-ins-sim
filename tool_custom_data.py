@@ -1,9 +1,3 @@
-"""
-Tool to generate custom data from files.
-Created on 2023-02-21
-@author: dinglezhang
-"""
-
 import os
 import math
 import numpy as np

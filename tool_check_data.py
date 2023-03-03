@@ -1,9 +1,3 @@
-"""
-Tool to check data between map data and sim data.
-Created on 2023-02-24
-@author: dinglezhang
-"""
-
 import os
 import numpy as np
 from gnss_ins_sim.sim import ins_sim
