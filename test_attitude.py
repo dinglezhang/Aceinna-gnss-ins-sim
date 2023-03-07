@@ -77,11 +77,11 @@ def test_euler_2_x(euler_d_input, rot_seq):
         print('attitude dcm:  %s (%s)'% (euler_d_att_dcm, euler_r_att_dcm))
         print('attitude quat: %s (%s)\n'% (euler_d_att_quat, euler_r_att_quat))
 
-def test_vectors_rotation(vectors_input, euler_d_input, rot_seq, on_frame):
+def test_vectors_rotation_intrinsic(vectors_input, euler_d_input, rot_seq, on_frame):
     on_str = 'on vector'
     if on_frame:
         on_str = 'on frame'
-    print('============================test vectors rotation %s============================'% on_str)
+    print('============================test vectors rotation intrinsicly %s============================'% on_str)
 
     print('vector input:\n%s'% vectors_input)
 
@@ -111,7 +111,36 @@ def test_vectors_rotation(vectors_input, euler_d_input, rot_seq, on_frame):
     print('***vetors rotated: %s***'% result)
     print('scipy Rotation:\n%s'% vectors_rotated_scipy)
     print('scipy dcm:\n%s'% vectors_rotated_scipy_dcm)
-    print('attitude dcm:\n%s'% vectors_rotated_att_dcm)
+    print('attitude dcm:\n%s\n'% vectors_rotated_att_dcm)
+
+# only scipy has function like this
+def test_vectors_rotation_extrinsic(vectors_input, euler_d_input, rot_seq, on_frame):
+    on_str = 'on vector'
+    if on_frame:
+        on_str = 'on frame'
+    print('============================test vectors rotation extrinsicly %s============================'% on_str)
+
+    print('vector input:\n%s'% vectors_input)
+
+    euler_r_input = euler_d_input * attitude.D2R
+    print('euler input by %s seqence: %s (%s)\n'% (rot_seq, euler_d_input, euler_r_input))
+
+    rot = Rotation.from_euler(rot_seq, euler_r_input)
+    vectors_rotated_scipy = rot.apply(vectors_input, on_frame)
+
+    dcm_scipy = rot.as_matrix()
+    if (not on_frame):
+        vectors_rotated_scipy_dcm = (dcm_scipy.dot(vectors_input.T)).T  # premultiplication to rotate vectors
+    else:
+        vectors_rotated_scipy_dcm = vectors_input.dot(dcm_scipy)        # postmultiplication to rotate frame
+
+    result = FAILED_STR
+    if np.allclose(vectors_rotated_scipy, vectors_rotated_scipy_dcm):
+        result =  PASS_STR
+
+    print('***vetors rotated: %s***'% result)
+    print('scipy Rotation:\n%s'% vectors_rotated_scipy)
+    print('scipy dcm:\n%s\n'% vectors_rotated_scipy_dcm)
 
 if __name__ == '__main__':
     euler_d_input = np.array([20, 80, 15])
@@ -126,5 +155,8 @@ if __name__ == '__main__':
         [0, 0, 1],
         [1, 1, 1]
     ])
-    test_vectors_rotation(vectors_input, euler_d_input, 'zyx', False)
-    test_vectors_rotation(vectors_input, euler_d_input, 'zyx', True)
+    test_vectors_rotation_intrinsic(vectors_input, euler_d_input, 'zyx', False)
+    test_vectors_rotation_intrinsic(vectors_input, euler_d_input, 'zyx', True)
+
+    test_vectors_rotation_extrinsic(vectors_input, euler_d_input, 'zyx', False)
+    test_vectors_rotation_extrinsic(vectors_input, euler_d_input, 'zyx', True)
