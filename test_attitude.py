@@ -6,12 +6,26 @@ from scipy.spatial.transform import Rotation
 PASS_STR = "\033[1;32mPASS\033[0m"       # with green color
 FAILED_STR = "\033[1;31mFAILED\033[0m"   # with red color
 
+PASS_COUNT = 0
+FAILED_COUNT = 0
+
 ROTATION_SEQUENCES = (\
     # three axis rotation
     'zyx', 'zxy', 'yxz', 'yzx', 'xyz', 'xzy', \
     # two axis rotation
     'zyz', 'zxz', 'yxy', 'yzy', 'xyx', 'xzx'\
 )
+
+def get_result(is_pass):
+    global PASS_COUNT
+    global FAILED_COUNT
+
+    if (is_pass):
+        PASS_COUNT = PASS_COUNT + 1
+        return PASS_STR
+    else:
+        FAILED_COUNT = FAILED_COUNT + 1
+        return FAILED_STR
 
 # euler2dcm()
 # euler2quat()
@@ -29,9 +43,7 @@ def euler_2_x(euler_d_input, rot_seq):
     # test euler2dcm()
     dcm_scipy = rot.as_matrix()
     dcm_att = attitude.euler2dcm(euler_r_input, rot_seq)
-    result = FAILED_STR
-    if np.allclose(dcm_scipy, dcm_att.T): # scipy is to rotate vector, but attitude is to rotate frame for postmultiplication
-        result =  PASS_STR
+    result = get_result(np.allclose(dcm_scipy, dcm_att.T)) # scipy is to rotate vector, but attitude is to rotate frame for postmultiplication
     print('***dcm output: %s***'% result)
     print('scipy: \n%s'% dcm_scipy)
     print('attitude:\n%s\n'% dcm_att)
@@ -39,22 +51,19 @@ def euler_2_x(euler_d_input, rot_seq):
     # test euler2quat()
     quat_scipy = rot.as_quat()
     quat_att = attitude.euler2quat(euler_r_input, rot_seq)
-    result = FAILED_STR
-    if np.allclose(quat_scipy, quat_att[[1, 2, 3, 0]]):
-        result =  PASS_STR
+    result = get_result(np.allclose(quat_scipy, quat_att[[1, 2, 3, 0]]))
     print('***quat output: %s***'% result)
     print('scipy: \n%s'% quat_scipy)
     print('attitude:\n%s\n'% quat_att)
 
     # test dcm2quat() and quat2dcm() as well
     quat_att = attitude.dcm2quat(dcm_att)
-    if not np.allclose(quat_scipy, quat_att[[1, 2, 3, 0]]):
-        print('***dcm2quat() %s***'% FAILED_STR)
-        return
+    result = get_result(np.allclose(quat_scipy, quat_att[[1, 2, 3, 0]]))
+    print('***dcm2quat() %s***'% result)
+
     dcm_att = attitude.quat2dcm(quat_att)
-    if not np.allclose(dcm_scipy, dcm_att.T):
-        print('***quat2dcm() %s***'% FAILED_STR)
-        return
+    result = get_result(np.allclose(dcm_scipy, dcm_att.T))
+    print('***quat2dcm() %s***'% result)
 
     # test dcm2euler() and quat2euler() for all kinds of rotation sequences
     for seq in ROTATION_SEQUENCES:
@@ -67,11 +76,7 @@ def euler_2_x(euler_d_input, rot_seq):
         euler_r_att_quat = attitude.quat2euler(quat_att, seq)
         euler_d_att_quat = euler_r_att_dcm * attitude.R2D
 
-        result = FAILED_STR
-        if np.allclose(euler_r_scipy, euler_r_att_dcm) and \
-           np.allclose(euler_r_scipy, euler_r_att_quat):
-            result =  PASS_STR
-
+        result = get_result(np.allclose(euler_r_scipy, euler_r_att_dcm) and np.allclose(euler_r_scipy, euler_r_att_quat))
         print('***euler output by %s sequence: %s***'% (seq, result))
         print('scipy:         %s (%s)'% (euler_d_scipy, euler_r_scipy))
         print('attitude dcm:  %s (%s)'% (euler_d_att_dcm, euler_r_att_dcm))
@@ -120,12 +125,13 @@ def vectors_rotation(vectors_input, euler_d_input, rot_seq, times = 1, is_extrin
     else:
         vectors_rotated_att_dcm = (dcm_att.dot(vectors_input.T)).T      # premultiplication to rotate frame
 
-    result = FAILED_STR
+    is_pass = False
     if np.allclose(vectors_rotated_scipy, vectors_rotated_scipy_dcm):
         if is_extrinsic:  #ignore vectors_rotated_att_dcm result for extrinsic
-            result = PASS_STR
+            is_pass = True
         elif np.allclose(vectors_rotated_scipy, vectors_rotated_att_dcm):
-            result = PASS_STR
+            is_pass = True
+    result = get_result(is_pass)
 
     print('***vetors rotated: %s***'% result)
     print('scipy Rotation:\n%s'% vectors_rotated_scipy)
@@ -172,10 +178,7 @@ def test_vectors_rotation(is_extrinsic):
 
     vectors_rotated_composed = vectors_rotation(vectors_input, euler_d_input, 'zyx', times, is_extrinsic, False)
 
-    result = FAILED_STR
-    if np.allclose(vectors_rotated_one_by_one, vectors_rotated_composed):
-        result = PASS_STR
-
+    result = get_result(np.allclose(vectors_rotated_one_by_one, vectors_rotated_composed))
     print('***vectors rotated results are SAME between one by one and composed: %s***'% result)
     print('one by one:\n%s'% vectors_rotated_one_by_one)
     print('composed:\n%s\n'% vectors_rotated_composed)
@@ -183,10 +186,7 @@ def test_vectors_rotation(is_extrinsic):
     euler_d_input = euler_d_input * times
     vectors_rotated_multiple_angles = vectors_rotation(vectors_input, euler_d_input, 'zyx', 1, is_extrinsic, False)
 
-    result = FAILED_STR
-    if not np.allclose(vectors_rotated_one_by_one, vectors_rotated_multiple_angles):
-        result = PASS_STR
-
+    result = get_result(not np.allclose(vectors_rotated_one_by_one, vectors_rotated_multiple_angles))
     print('***vectors rotated results are DIFFERENT between one by one and by multiple angles: %s***'% result)
     print('one by one:\n%s'% vectors_rotated_one_by_one)
     print('multiple angles:\n%s\n'% vectors_rotated_multiple_angles)
@@ -195,3 +195,5 @@ if __name__ == '__main__':
     test_euler_2_x()
     test_vectors_rotation(False)
     test_vectors_rotation(True)
+
+    print('%s: %s\n%s: %s'% (PASS_STR, PASS_COUNT, FAILED_STR, FAILED_COUNT))
