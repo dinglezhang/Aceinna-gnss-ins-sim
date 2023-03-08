@@ -3,10 +3,10 @@ import numpy as np
 from gnss_ins_sim.attitude import attitude
 from scipy.spatial.transform import Rotation
 
-PASS_STR = "\033[1;32mPASS\033[0m"       # with green color
+PASSED_STR = "\033[1;32mPASSED\033[0m"       # with green color
 FAILED_STR = "\033[1;31mFAILED\033[0m"   # with red color
 
-PASS_COUNT = 0
+PASSED_COUNT = 0
 FAILED_COUNT = 0
 
 ROTATION_SEQUENCES = (\
@@ -16,13 +16,13 @@ ROTATION_SEQUENCES = (\
     'zyz', 'zxz', 'yxy', 'yzy', 'xyx', 'xzx'\
 )
 
-def get_result(is_pass):
-    global PASS_COUNT
+def get_result(is_passed):
+    global PASSED_COUNT
     global FAILED_COUNT
 
-    if (is_pass):
-        PASS_COUNT = PASS_COUNT + 1
-        return PASS_STR
+    if is_passed:
+        PASSED_COUNT = PASSED_COUNT + 1
+        return PASSED_STR
     else:
         FAILED_COUNT = FAILED_COUNT + 1
         return FAILED_STR
@@ -125,13 +125,13 @@ def vectors_rotation(vectors_input, euler_d_input, rot_seq, times = 1, is_extrin
     else:
         vectors_rotated_att_dcm = (dcm_att.dot(vectors_input.T)).T      # premultiplication to rotate frame
 
-    is_pass = False
+    is_passed = False
     if np.allclose(vectors_rotated_scipy, vectors_rotated_scipy_dcm):
         if is_extrinsic:  #ignore vectors_rotated_att_dcm result for extrinsic
-            is_pass = True
+            is_passed = True
         elif np.allclose(vectors_rotated_scipy, vectors_rotated_att_dcm):
-            is_pass = True
-    result = get_result(is_pass)
+            is_passed = True
+    result = get_result(is_passed)
 
     print('***vetors rotated: %s***'% result)
     print('scipy Rotation:\n%s'% vectors_rotated_scipy)
@@ -196,4 +196,4 @@ if __name__ == '__main__':
     test_vectors_rotation(False)
     test_vectors_rotation(True)
 
-    print('%s: %s\n%s: %s'% (PASS_STR, PASS_COUNT, FAILED_STR, FAILED_COUNT))
+    print('%s: %s\n%s: %s'% (PASSED_STR, PASSED_COUNT, FAILED_STR, FAILED_COUNT))
