@@ -92,7 +92,7 @@ def euler_2_x(euler_d_input, rot_seq):
     result = get_result(np.allclose(cross_rotvec_mrp, [0, 0, 0]) and    # the two are parallel
                         np.allclose(math.tan(norm_rotvec/4), norm_mrp)) # angle relation
     print('***scipy rotvec and mrp output are consistent: %s***'% result)
-    print('rotvec: %s angle:        %s'% (rotvec_scipy, norm_rotvec))
+    print('rotvec: %s angle:        %s'% (rotvec_scipy, norm_rotvec*attitude.R2D))
     print('mrp:    %s tan(angle/4): %s\n'% (mrp_scipy, norm_mrp))
 
     # just output eulers for all kinds of rotation sequences by scipy extrinsicly, without test
@@ -163,6 +163,38 @@ def vectors_rotation(vectors_input, euler_d_input, rot_seq, times = 1, is_extrin
 
     return vectors_rotated_scipy
 
+# the key is the rotvec in space has no change. Just to get rotvec in the new frame
+def euler_in_new_frame(euler_d_body_old_2_att, euler_frame_old_2_new):
+    rot_frame_old_2_new = Rotation.from_euler('ZYX', euler_frame_old_2_new, True)
+    euler_frame_old_2_new = rot_frame_old_2_new.as_euler('ZYX', True) # to get normalized eulers
+    print('***frame from old to new:***')
+    print('euler: %s\n'% euler_frame_old_2_new)
+
+    rot_body_old_2_att = Rotation.from_euler('ZYX', euler_d_body_old_2_att, True)
+    euler_d_body_old_2_att = rot_body_old_2_att.as_euler('ZYX', True) # to get normalized eulers
+    rotvec_body_old_2_att = rot_body_old_2_att.as_rotvec()
+    print('***body from old frame to att***:')
+    print('euler:  %s'% euler_d_body_old_2_att)
+    print('rotvec: %s\n'% rotvec_body_old_2_att)
+
+    rotvec_body_new_2_att = rot_frame_old_2_new.inv().apply(rotvec_body_old_2_att)
+    rot_body_new_2_att = Rotation.from_rotvec(rotvec_body_new_2_att)
+    euler_d_body_new_2_att = rot_body_new_2_att.as_euler('ZYX', True)
+    print('***body from new to att***:')
+    print('euler:  %s'% euler_d_body_new_2_att)
+    print('rotvec: %s\n'% rotvec_body_new_2_att)
+
+    return euler_d_body_new_2_att
+
+def euler_frame_ned_2_enu(euler_d_body_ned_2_att, expeected_euler_d_body_enu_2_att):
+    euler_d_frame_ned_2_enu = np.array([-90, 180, 0])
+
+    euler_d_body_enu_2_att = euler_in_new_frame(euler_d_body_ned_2_att, euler_d_frame_ned_2_enu)
+    result = get_result(np.allclose(euler_d_body_enu_2_att, expeected_euler_d_body_enu_2_att))
+    print('***euler from ned to enu: %s***'% result)
+    print('body from ned to att:\n%s'% euler_d_body_ned_2_att)
+    print('body from enu to att:\n%s\n'% euler_d_body_enu_2_att)
+
 def test_euler_2_x():
     print('============================test euler2x============================')
 
@@ -223,6 +255,12 @@ def test_vectors_rotation_multple_times(is_extrinsic):
     print('one by one:\n%s'% vectors_rotated_one_by_one)
     print('multiple angles:\n%s\n'% vectors_rotated_multiple_angles)
 
+def test_euler_frame_ned_2_enu():
+    euler_frame_ned_2_enu(np.array([45, 0, 0]), np.array([-45, 0, 0]))
+    euler_frame_ned_2_enu(np.array([0, 45, 0]), np.array([0, 0, 45]))
+    euler_frame_ned_2_enu(np.array([0, 0, 45]), np.array([0, 45, 0]))
+    euler_frame_ned_2_enu(np.array([90, 45, 90]), np.array([0, 45, 90]))
+
 if __name__ == '__main__':
     test_euler_2_x()
 
@@ -231,5 +269,7 @@ if __name__ == '__main__':
 
     test_vectors_rotation_once(True)
     test_vectors_rotation_multple_times(True)
+
+    test_euler_frame_ned_2_enu()
 
     print('%s: %s\n%s: %s'% (PASSED_STR, PASSED_COUNT, FAILED_STR, FAILED_COUNT))
