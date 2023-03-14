@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import quaternion
 from gnss_ins_sim.attitude import attitude
 from scipy.spatial.transform import Rotation
 
@@ -27,10 +28,14 @@ def get_result(is_passed):
         FAILED_COUNT = FAILED_COUNT + 1
         return FAILED_STR
 
-# euler2dcm()
-# euler2quat()
-# dcm2euler() and quat2euler() by all rotation sequneces. (looks like euler to euler from input)
-# dcm2quat() and quat2dcm() as well
+'''
+output all kinds of expression of a rotation expressed by euler
+as well as tests on the following functions provided by attitude
+    euler2dcm()
+    euler2quat()
+    dcm2euler() and quat2euler() by all rotation sequneces. (looks like euler to euler from input)
+    dcm2quat() and quat2dcm()
+'''
 def euler_2_x(euler_d_input, rot_seq):
     print('~~~~~~~~~~euler2x~~~~~~~~~~')
 
@@ -40,15 +45,15 @@ def euler_2_x(euler_d_input, rot_seq):
 
     rot = Rotation.from_euler(rot_seq.upper(), euler_r_input) # in body frame (intrinsic)
 
-    # test euler2dcm()
+    # output dcm, as well as test on euler2dcm()
     dcm_scipy = rot.as_matrix()
     dcm_att = attitude.euler2dcm(euler_r_input, rot_seq)
-    result = get_result(np.allclose(dcm_scipy, dcm_att.T)) # scipy is to rotate vector, but attitude is to rotate frame for postmultiplication
+    result = get_result(np.allclose(dcm_scipy, dcm_att.T)) # scipy is to rotate vector, but attitude is to rotate frame for right multiplication
     print('***dcm output: %s***'% result)
     print('scipy: \n%s'% dcm_scipy)
     print('attitude:\n%s\n'% dcm_att)
 
-    # test euler2quat()
+    # output quat, as well as test on euler2quat()
     quat_scipy = rot.as_quat()
     quat_att = attitude.euler2quat(euler_r_input, rot_seq)
     result = get_result(np.allclose(quat_scipy, quat_att[[1, 2, 3, 0]]))
@@ -56,7 +61,7 @@ def euler_2_x(euler_d_input, rot_seq):
     print('scipy: \n%s'% quat_scipy)
     print('attitude:\n%s\n'% quat_att)
 
-    # test dcm2quat() and quat2dcm() as well
+    # test on dcm2quat() and quat2dcm()
     quat_att = attitude.dcm2quat(dcm_att)
     result = get_result(np.allclose(quat_scipy, quat_att[[1, 2, 3, 0]]))
     print('***dcm2quat() %s***'% result)
@@ -65,7 +70,7 @@ def euler_2_x(euler_d_input, rot_seq):
     result = get_result(np.allclose(dcm_scipy, dcm_att.T))
     print('***quat2dcm() %s***\n'% result)
 
-    # test dcm2euler() and quat2euler() for all kinds of rotation sequences intrinsicly
+    # output euler for all kinds of rotation sequences intrinsicly, as well as test on dcm2euler() and quat2euler()
     for rot_seq in ROTATION_SEQUENCES:
         euler_r_scipy = rot.as_euler(rot_seq.upper())
         euler_d_scipy = euler_r_scipy * attitude.R2D
@@ -77,12 +82,12 @@ def euler_2_x(euler_d_input, rot_seq):
         euler_d_att_quat = euler_r_att_dcm * attitude.R2D
 
         result = get_result(np.allclose(euler_r_scipy, euler_r_att_dcm) and np.allclose(euler_r_scipy, euler_r_att_quat))
-        print('***euler output by %s sequence intrinsicly: %s***'% (rot_seq, result))
+        print('***euler output intrinsicly by %s sequence: %s***'% (rot_seq, result))
         print('scipy:         %s (%s)'% (euler_d_scipy, euler_r_scipy))
         print('attitude dcm:  %s (%s)'% (euler_d_att_dcm, euler_r_att_dcm))
         print('attitude quat: %s (%s)\n'% (euler_d_att_quat, euler_r_att_quat))
 
-    # test output rotvec and mrp by scipy consistence
+    # output rotvec and mrp by scipy and test on their consistence
     rotvec_scipy = rot.as_rotvec()
     mrp_scipy = rot.as_mrp()
     cross_rotvec_mrp = np.cross(rotvec_scipy, mrp_scipy)
@@ -91,11 +96,11 @@ def euler_2_x(euler_d_input, rot_seq):
 
     result = get_result(np.allclose(cross_rotvec_mrp, [0, 0, 0]) and    # the two are parallel
                         np.allclose(math.tan(norm_rotvec/4), norm_mrp)) # angle relation
-    print('***scipy rotvec and mrp output are consistent: %s***'% result)
+    print('***scipy rotvec and mrp output: %s***'% result)
     print('rotvec: %s angle:        %s'% (rotvec_scipy, norm_rotvec*attitude.R2D))
     print('mrp:    %s tan(angle/4): %s\n'% (mrp_scipy, norm_mrp))
 
-    # just output eulers for all kinds of rotation sequences by scipy extrinsicly, without test
+    # output eulers for all kinds of rotation sequences by scipy extrinsicly
     print('***scipy euler output extrinsicly***')
     for rot_seq in ROTATION_SEQUENCES:
         euler_r_scipy = rot.as_euler(rot_seq)
@@ -103,6 +108,14 @@ def euler_2_x(euler_d_input, rot_seq):
         print('%s: %s (%s)'% (rot_seq, euler_d_scipy, euler_r_scipy))
     print()
 
+'''
+to rotate by 4 ways:
+    Rotation
+    dcm by scipy.Rotation
+    dcm by attitude
+    quaternion
+they should get the same results
+'''
 def vectors_rotation(vectors_input, euler_d_input, rot_seq, times = 1, is_extrinsic = False, on_frame = False):
     times_str = ''
     if times > 1:
@@ -121,33 +134,39 @@ def vectors_rotation(vectors_input, euler_d_input, rot_seq, times = 1, is_extrin
 
     rot_seq_scipy = rot_seq.upper() # intrinsic
     if is_extrinsic:
-        rot_seq_scipy = rot_seq
+        rot_seq_scipy = rot_seq     # extrinsic
     rot_once = Rotation.from_euler(rot_seq_scipy, euler_r_input)
+
     dcm_scipy_once = rot_once.as_matrix()
     dcm_att_once = attitude.euler2dcm(euler_r_input, rot_seq)
+
+    quat_vectors_input = quaternion.from_vector_part(vectors_input)
+    quat_once = quaternion.from_float_array(rot_once.as_quat()[[3, 0, 1, 2]])
 
     rot = rot_once
     dcm_scipy = dcm_scipy_once
     dcm_att = dcm_att_once
+    quat = quat_once
     for i in range(1, times):
         rot = rot * rot_once
         dcm_scipy = dcm_scipy.dot(dcm_scipy_once)
         dcm_att = dcm_att.dot(dcm_att_once)
+        quat = quat * quat_once
 
     vectors_rotated_scipy = rot.apply(vectors_input, on_frame)
 
-    if (not on_frame):
-        vectors_rotated_scipy_dcm = (dcm_scipy.dot(vectors_input.T)).T  # premultiplication to rotate vectors
-    else:
-        vectors_rotated_scipy_dcm = vectors_input.dot(dcm_scipy)        # postmultiplication to rotate frame
-
-    if (not on_frame):
-        vectors_rotated_att_dcm = vectors_input.dot(dcm_att)            # postmultiplication to rotate vectors since dcm_att == dcm_scipy.T
-    else:
-        vectors_rotated_att_dcm = (dcm_att.dot(vectors_input.T)).T      # premultiplication to rotate frame
+    if (not on_frame):  # to rotate vectors
+        vectors_rotated_scipy_dcm = (dcm_scipy.dot(vectors_input.T)).T  # left multiplication to rotate vectors
+        vectors_rotated_att_dcm = vectors_input.dot(dcm_att)            # right multiplication to rotate vectors since dcm_att == dcm_scipy.T
+        vectors_rotated_quat = quaternion.as_vector_part(quat * quat_vectors_input * quat.conjugate())
+    else:  # to rotate frame
+        vectors_rotated_scipy_dcm = vectors_input.dot(dcm_scipy)        # right multiplication to rotate frame
+        vectors_rotated_att_dcm = (dcm_att.dot(vectors_input.T)).T      # left multiplication to rotate frame
+        vectors_rotated_quat = quaternion.as_vector_part(quat.conjugate() * quat_vectors_input * quat)
 
     is_passed = False
-    if np.allclose(vectors_rotated_scipy, vectors_rotated_scipy_dcm):
+    if np.allclose(vectors_rotated_scipy, vectors_rotated_scipy_dcm) and\
+       np.allclose(vectors_rotated_scipy, vectors_rotated_quat):
         if is_extrinsic:  #ignore vectors_rotated_att_dcm result for extrinsic
             is_passed = True
         elif np.allclose(vectors_rotated_scipy, vectors_rotated_att_dcm):
@@ -155,16 +174,19 @@ def vectors_rotation(vectors_input, euler_d_input, rot_seq, times = 1, is_extrin
     result = get_result(is_passed)
 
     print('***vetors rotated: %s***'% result)
-    print('scipy Rotation:\n%s'% vectors_rotated_scipy)
+    print('Rotation:\n%s'% vectors_rotated_scipy)
     print('scipy dcm:\n%s'% vectors_rotated_scipy_dcm)
     if not is_extrinsic:
         print('attitude dcm:\n%s'% vectors_rotated_att_dcm)
+    print('quaternion:\n%s'% vectors_rotated_quat)
     print()
 
     return vectors_rotated_scipy
 
 # the key is the rotvec in space has no change. Just to get rotvec in the new frame
 def euler_in_new_frame(euler_d_body_old_2_att, euler_frame_old_2_new):
+    print('~~~~~~~~~~euler in new frame~~~~~~~~~~')
+
     rot_frame_old_2_new = Rotation.from_euler('ZYX', euler_frame_old_2_new, True)
     euler_frame_old_2_new = rot_frame_old_2_new.as_euler('ZYX', True) # to get normalized eulers
     print('***frame from old to new:***')
@@ -262,6 +284,8 @@ def test_euler_frame_ned_2_enu():
     euler_frame_ned_2_enu(np.array([90, 45, 90]), np.array([0, 45, 90]))
 
 if __name__ == '__main__':
+    np.set_printoptions(precision = 8, suppress = True)
+
     test_euler_2_x()
 
     test_vectors_rotation_once(False)
