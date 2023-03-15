@@ -208,11 +208,11 @@ def euler_in_new_frame(euler_d_body_old_2_att, euler_frame_old_2_new):
 
     return euler_d_body_new_2_att
 
-def euler_frame_ned_2_enu(euler_d_body_ned_2_att, expeected_euler_d_body_enu_2_att):
+def euler_frame_ned_2_enu(euler_d_body_ned_2_att, expected_euler_d_body_enu_2_att):
     euler_d_frame_ned_2_enu = np.array([-90, 180, 0])
 
     euler_d_body_enu_2_att = euler_in_new_frame(euler_d_body_ned_2_att, euler_d_frame_ned_2_enu)
-    result = get_result(np.allclose(euler_d_body_enu_2_att, expeected_euler_d_body_enu_2_att))
+    result = get_result(np.allclose(euler_d_body_enu_2_att, expected_euler_d_body_enu_2_att))
     print('***euler from ned to enu: %s***'% result)
     print('body from ned to att:\n%s'% euler_d_body_ned_2_att)
     print('body from enu to att:\n%s\n'% euler_d_body_enu_2_att)
