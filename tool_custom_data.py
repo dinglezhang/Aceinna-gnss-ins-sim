@@ -1,51 +1,25 @@
 import os
-import math
 import numpy as np
+from scipy.spatial.transform import Rotation
+
 from gnss_ins_sim.sim import ins_sim
 from gnss_ins_sim.sim import sim_data
-from gnss_ins_sim.attitude import attitude
-from scipy.spatial.transform import Rotation as R
 
 fs = 100.0          # IMU sample frequency
 fs_gps = 10.0       # GPS sample frequency
 fs_mag = fs         # magnetometer sample frequency, not used for now
 
-def build_rotation_matrix(rotation_quaternion: np.ndarray):
-    """Construct a 3x3 rotation matrix given a rotation quaternion"""
-    q0 = rotation_quaternion[0][0]
-    q1 = rotation_quaternion[1][0]
-    q2 = rotation_quaternion[2][0]
-    q3 = rotation_quaternion[3][0]
-    return np.array([
-        [2*q0**2 + 2*q1**2 - 1, 2*(q1*q2 - q3*q0),      2*(q1*q3 + q2*q0)],
-        [2*(q1*q2 + q3*q0),     2*q0**2 + 2*q2**2 - 1,  2*(q2*q3 - q1*q0)],
-        [2*(q1*q3 - q2*q0),     2*(q2*q3 + q1*q0),      2*q0**2 + 2*q3**2 - 1]
-    ])
+ROT_FRAME_NED_2_ENU = Rotation.from_euler('ZYX', np.array([-90, 180, 0]), True)
 
-def euler_frd_to_rfu(ref_att_quat_data):
-    ned2enu_quaternion = np.array([
-        [0],
-        [-math.sqrt(2)/2],
-        [-math.sqrt(2)/2],
-        [0]
-        ])
-    ned2enu_rotation_matrix = build_rotation_matrix(ned2enu_quaternion)
+def convert_att_euler_frame_ned_2_enu(att_euler_ned_2_frd):
+    rot_ned_2_frd = Rotation.from_euler('ZYX', att_euler_ned_2_frd)
+    rotvec_ned_2_frd = rot_ned_2_frd.as_rotvec()
 
-    ned2frd_quat = ref_att_quat_data
-    frdheading = np.array([[1], [0], [0]])
-    rfuheading = np.array([[0], [1], [0]])
-    enu_rfu_euler = np.zeros([ned2frd_quat.shape[0], 3])
-    for i in range(0, ned2frd_quat.shape[0]):
-        vec_ned = attitude.quat2dcm(ned2frd_quat[i]).T.dot(frdheading)
-        vec_enu = ned2enu_rotation_matrix.dot(vec_ned)
-        crossv = attitude.cross3(rfuheading, vec_enu)
-        #crossv = attitude.cross3(vec_enu, rfuheading)
-        crossv = crossv / np.linalg.norm(crossv)
-        theta  = math.acos(vec_enu.reshape(3).dot(rfuheading.reshape(3))/(np.linalg.norm(vec_enu) * np.linalg.norm(rfuheading)))
-        q = R.from_rotvec(theta * crossv.reshape(3))
-        enu_rfu_euler[i] = q.as_euler('zyx')
+    rotvec_enu_2_rfu = ROT_FRAME_NED_2_ENU.inv().apply(rotvec_ned_2_frd)
+    rot_enu_2_rfu = Rotation.from_rotvec(rotvec_enu_2_rfu)
+    att_euler_enu_2_rfu = rot_enu_2_rfu.as_euler('ZYX')
 
-    return enu_rfu_euler
+    return att_euler_enu_2_rfu
 
 def gen_custom_data_from_files(input_data_dir, output_data_dir):
     # start simulation to read data from files
@@ -100,10 +74,10 @@ def gen_custom_data_from_files(input_data_dir, output_data_dir):
         'pitch_vel', 'roll_vel', 'yaw_vel',
         'delta_dist'
     ]
-    custom_data = sim_data.Sim_data(name='imu_all',\
-                                    description=description_zh,\
-                                    units=[],\
-                                    output_units=output_units,\
+    custom_data = sim_data.Sim_data(name='imu_all',
+                                    description=description_zh,
+                                    units=[],
+                                    output_units=output_units,
                                     legend=legend)
     custom_data.units = []  # set units back since it is set to output_units by Sim_data
 
@@ -138,11 +112,11 @@ def gen_custom_data_from_files(input_data_dir, output_data_dir):
     # lat, lon, alt -> lon, lat, alt
     custom_data.data[:, 0:3] = sim.dmgr.ref_pos.data[:, [1, 0, 2]]
 
-    # ref_att_euler from NED(yaw, pitch, roll) to ENU(pitch, roll, yaw)
-    #enu_rfu_euler = euler_frd_to_rfu(sim.dmgr.ref_att_quat.data)
-    #custom_data.data[:, 0:3] = enu_rfu_euler[:, [1, 2, 0]]
-
-    custom_data.data[:, 3:6] = sim.dmgr.ref_att_euler.data[:, [1, 2, 0]]
+    # ref_att_euler from NED->FRD(yaw, pitch, roll) to ENU->RFU(pitch, roll, yaw)
+    att_euler_enu_2_rfu = convert_att_euler_frame_ned_2_enu(sim.dmgr.ref_att_euler.data)
+    att_euler_enu_2_rfu = att_euler_enu_2_rfu[:, [2, 1, 0]]
+    att_euler_enu_2_rfu[:, 2] = -att_euler_enu_2_rfu[:, 2]
+    custom_data.data[:, 3:6] = att_euler_enu_2_rfu
 
     # ref_vel from NED to ENU
     custom_data.data[:, 6:9] = sim.dmgr.ref_vel.data[:, [1, 0, 2]]

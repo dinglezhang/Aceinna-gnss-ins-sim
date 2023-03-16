@@ -1,8 +1,9 @@
 import math
 import numpy as np
 import quaternion
-from gnss_ins_sim.attitude import attitude
 from scipy.spatial.transform import Rotation
+
+from gnss_ins_sim.attitude import attitude
 
 PASSED_STR = "\033[1;32mPASSED\033[0m"       # with green color
 FAILED_STR = "\033[1;31mFAILED\033[0m"   # with red color
@@ -184,7 +185,7 @@ def vectors_rotation(vectors_input, euler_d_input, rot_seq, times = 1, is_extrin
     return vectors_rotated_scipy
 
 # the key is the rotvec in space has no change. Just to get rotvec in the new frame
-def euler_in_new_frame(euler_d_body_old_2_att, euler_frame_old_2_new):
+def att_euler_in_new_frame(euler_d_body_old_2_att, euler_frame_old_2_new):
     print('~~~~~~~~~~euler in new frame~~~~~~~~~~')
 
     rot_frame_old_2_new = Rotation.from_euler('ZYX', euler_frame_old_2_new, True)
@@ -202,20 +203,20 @@ def euler_in_new_frame(euler_d_body_old_2_att, euler_frame_old_2_new):
     rotvec_body_new_2_att = rot_frame_old_2_new.inv().apply(rotvec_body_old_2_att)
     rot_body_new_2_att = Rotation.from_rotvec(rotvec_body_new_2_att)
     euler_d_body_new_2_att = rot_body_new_2_att.as_euler('ZYX', True)
-    print('***body from new to att***:')
+    print('***body from new frame to att***:')
     print('euler:  %s'% euler_d_body_new_2_att)
     print('rotvec: %s\n'% rotvec_body_new_2_att)
 
     return euler_d_body_new_2_att
 
-def euler_frame_ned_2_enu(euler_d_body_ned_2_att, expected_euler_d_body_enu_2_att):
-    euler_d_frame_ned_2_enu = np.array([-90, 180, 0])
+EULER_D_FRAME_NED_2_ENU = np.array([-90, 180, 0])
 
-    euler_d_body_enu_2_att = euler_in_new_frame(euler_d_body_ned_2_att, euler_d_frame_ned_2_enu)
-    result = get_result(np.allclose(euler_d_body_enu_2_att, expected_euler_d_body_enu_2_att))
-    print('***euler from ned to enu: %s***'% result)
-    print('body from ned to att:\n%s'% euler_d_body_ned_2_att)
-    print('body from enu to att:\n%s\n'% euler_d_body_enu_2_att)
+def att_euler_frame_ned_2_enu(att_euler_d_ned_2_frd, expected_att_euler_enu_2_rfu):
+    att_euler_d_enu_2_rfu = att_euler_in_new_frame(att_euler_d_ned_2_frd, EULER_D_FRAME_NED_2_ENU)
+    result = get_result(np.allclose(att_euler_d_enu_2_rfu, expected_att_euler_enu_2_rfu))
+    print('***attitude euler from ned to enu: %s***'% result)
+    print('body from ned to frd:\n%s'% att_euler_d_ned_2_frd)
+    print('body from enu to rfu:\n%s\n'% att_euler_d_enu_2_rfu)
 
 def test_euler_2_x():
     print('============================test euler2x============================')
@@ -277,11 +278,11 @@ def test_vectors_rotation_multple_times(is_extrinsic):
     print('one by one:\n%s'% vectors_rotated_one_by_one)
     print('multiple angles:\n%s\n'% vectors_rotated_multiple_angles)
 
-def test_euler_frame_ned_2_enu():
-    euler_frame_ned_2_enu(np.array([45, 0, 0]), np.array([-45, 0, 0]))
-    euler_frame_ned_2_enu(np.array([0, 45, 0]), np.array([0, 0, 45]))
-    euler_frame_ned_2_enu(np.array([0, 0, 45]), np.array([0, 45, 0]))
-    euler_frame_ned_2_enu(np.array([90, 45, 90]), np.array([0, 45, 90]))
+def test_att_euler_frame_ned_2_enu():
+    att_euler_frame_ned_2_enu(np.array([45, 0, 0]), np.array([-45, 0, 0]))
+    att_euler_frame_ned_2_enu(np.array([0, 45, 0]), np.array([0, 0, 45]))
+    att_euler_frame_ned_2_enu(np.array([0, 0, 45]), np.array([0, 45, 0]))
+    att_euler_frame_ned_2_enu(np.array([90, 45, 90]), np.array([0, 45, 90]))
 
 if __name__ == '__main__':
     np.set_printoptions(precision = 8, suppress = True)
@@ -294,6 +295,6 @@ if __name__ == '__main__':
     test_vectors_rotation_once(True)
     test_vectors_rotation_multple_times(True)
 
-    test_euler_frame_ned_2_enu()
+    test_att_euler_frame_ned_2_enu()
 
     print('%s: %s\n%s: %s'% (PASSED_STR, PASSED_COUNT, FAILED_STR, FAILED_COUNT))
