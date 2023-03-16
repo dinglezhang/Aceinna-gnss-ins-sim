@@ -1,0 +1,9 @@
+test_rotation:
+  applications:
+
+  study:
+    to calculate rotation by rotvec or mrp directly
+    how to convert rotvec to quat and reversly, ref to quaternion lib
+    extrinsic与extrinsic反旋转顺序欧拉角值相等，why?
+
+    relation betwwen eig and rotation matrix
