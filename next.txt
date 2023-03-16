@@ -1,3 +1,6 @@
+tool_check_data:
+  how to check if euler angle from ned to enu is correct?
+
 test_rotation:
   applications:
 
@@ -5,5 +8,7 @@ test_rotation:
     to calculate rotation by rotvec or mrp directly
     how to convert rotvec to quat and reversly, ref to quaternion lib
     extrinsic与extrinsic反旋转顺序欧拉角值相等，why?
-
     relation betwwen eig and rotation matrix
+
+study imu:
+  understand differences between gyro and angular velocity
