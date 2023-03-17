@@ -123,7 +123,8 @@ def att_euler_frame_ned_2_enu(input_data_dir, output_data_dir):
     att_euler_enu_2_rfu[:, 2] = -att_euler_enu_2_rfu[:, 2]
     save_att_euler_to_file(att_euler_data, 'att_euler_rotvec', att_euler_enu_2_rfu, output_data_dir)
 
-    # calculate rotvec by two vectors, but it is not correct since it lacks of one dimension of self-rotation
+    # calculate rotvec by two vectors.
+    # but it is not correct since it assumes rotvec is vetical with heading vector rotation plane, which is not true
     att_euler_enu_2_rfu_quat = convert_att_euler_frame_ned_2_enu_by_quat(sim.dmgr.ref_att_quat.data)
     att_euler_enu_2_rfu_quat = att_euler_enu_2_rfu_quat[:, [2, 1, 0]]
     att_euler_enu_2_rfu_quat[:, 2] = -att_euler_enu_2_rfu_quat[:, 2]
