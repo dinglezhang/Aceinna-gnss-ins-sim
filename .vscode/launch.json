@@ -23,10 +23,10 @@
       "justMyCode": false
     },
     {
-      "name": "test_attitude",
+      "name": "test_rotation",
       "type": "python",
       "request": "launch",
-      "module": "test_attitude",
+      "module": "test_rotation",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "justMyCode": false
